@@ -1,0 +1,2435 @@
+---
+title: 'Supplementary results: sample pooling in RNA-seq experiments'
+author: "Alemu Takele Assefa, Jo Vandesompele, and Olivier Thas"
+date: "October 28, 2019"
+output:
+  pdf_document:
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+  word_document:
+    toc: yes
+    toc_depth: '3'
+latex_engine: pdflatex
+header-includes:
+- \usepackage{float}
+- \floatplacement{figure}{H}
+- \usepackage{fixmath}
+- \usepackage{booktabs}
+- \usepackage{amsmath}
+- \usepackage{verbatim}
+- \usepackage{multirow}
+- \usepackage{eurosym}
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.pos= "h")
+knitr::opts_knit$set(root.dir ='C:/Users/Alemu/Dropbox/Sample pooling strategy for RNA-seq data analysis/Sample Pooling/') 
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+source("Global files/DE_Tools.R")
+source("Global files/subSampling.R")
+source("Global files/reorder_within.R")
+
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+```
+\newcommand{\mb}[1]
+   {\boldsymbol{#1}}
+\newcommand{\trace}[1]
+   {\mbox{tr}\left[#1\right]}
+\newcommand{\E}[1]
+  {\mbox{E}\left\{#1\right\}}
+\newcommand{\Ef}[2]
+  {\mbox{E}_{#1}\left\{#2\right\}}
+\newcommand{\cov}[1]
+  {\mbox{Cov}\left\{#1\right\}}
+\newcommand{\covf}[2]
+  {\mbox{Cov}_{#1}\left\{#2\right\}}
+\newcommand{\var}[1]
+  {\mbox{Var}\left\{#1\right\}}
+\newcommand{\eps}[0]
+  {\varepsilon}
+\newenvironment{proof}
+	{\par {\bfseries Proof. }}
+	{\hfill $\square$}
+\newcommand{\comb}[2]
+  {\left( \shortstack{#1\\#2}\right)}
+ 
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+
+
+# Supplementary results 1: theoretical results 
+## Proofs for the mean and variance of $Y_k$
+We present here the proof for $\var{Y_k}$ in equation (3) in the manuscript. We first prove the expressions analytically and later we present the empirical confirmation using Monte-Carlo simulations. For a reminder, $n$ is the number of biological samples, $m$ is the number of pools, $q$ is the number of biological samples per pool ($q=n/m$), $U_j$ is the read counts of a given gene in biological sample $j=1,2,\ldots,n$, $Y_k$ is the gene expression level in pool $k=1,2,\ldots, m$, $W_{jk}$ denote the mixing weight for biological sample $j$ in pool $k$, and $A_{jk}$ is an indicator defined as 1 if biological sample $j$ is in pool $k$, and 0 otherwise.
+\begin{proof}
+	The data generating model in (1) is conditional on the pool size $q$, which is assumed to be fixed. This implies that $A_{jk}$ is subject to the additional constraint $\sum_{j=1}^n A_{jk}=q$, which affects the variance calculation. 
+	
+	Without the constraint, if we let $Q = \sum_{j=1}^n A_{jk} \in \{0, 1,\ldots, n\}$, then $Q\sim \textrm{Binomial}(n, 1/m)$. Similarly, let $Q^{(j)} = \sum_{i\ne j} A_{ik}\in \{0, 1,\ldots, n-1\}$, then $Q^{(j)}\sim \textrm{Binomial}(n-1, 1/m)$. Therefore,
+	
+	\begin{equation*}
+	\begin{aligned}
+	\textrm{P}({A_{jk} =1|Q=q}) &= \frac{\textrm{P}({Q=q|A_{jk} =1})\textrm{P}({A_{jk} =1})}{\textrm{P}({Q=q})}  = \frac{\textrm{P}({Q^{(j)}=q-1})\frac{1}{m}}{\textrm{P}({Q=q})}.
+	\end{aligned}
+	\end{equation*}
+	
+	This is because $\textrm{P}({Q=q|A_{jk} =1}) = \textrm{P}({Q^{(j)}=q-1})$. Therefore,
+	\begin{equation*}
+	\begin{aligned}
+	\textrm{P}({A_{jk} =1|Q=q}) &= \frac{\textrm{P}({Q^{(j)}=q-1})\frac{1}{m}}{\textrm{P}({Q=q})}
+	= \frac{\comb{n-1}{q-1}\left(\frac{1}{m}\right)^{q-1}\left(1-\frac{1}{m}\right)^{n-q}\frac{1}{m}}{\comb{n}{q}\left(\frac{1}{m}\right)^{q}\left(1-\frac{1}{m}\right)^{n-q}} = \frac{q}{n}.
+	\end{aligned}
+	\end{equation*}
+	
+	Consequently, 
+	\begin{equation*}
+	\begin{aligned}
+	\E{A_{jk}|Q=q} &= \textrm{P}({A_{jk} =1|Q=q})= \frac{q}{n},\\
+	\var{A_{jk}|Q=q} &= (1-\textrm{P}({A_{jk} =1|Q=q}))\times\textrm{P}({A_{jk} =1|Q=q}) = \frac{q(n-q)}{n^2}.
+	\end{aligned}
+	\end{equation*}
+	
+The same result can also be obtained if we translate the problem to an $m\times n$ contingency table with fixed row and column totals (similar constraints we have). That is, if pools ($k=1,2,\ldots, m$) are in the rows and the biological samples ($j=1,2,\ldots, n$) are in the columns, then all the row totals will be $q$ and all the column totals will be 1, and $A_{jk}$ are the $(ij)^{th}$ ellements of the table. This setting will give exactly the same mean and variance of $A_{jk}$.
+	
+	In addition, under the assumption that the pooling weights $\mb W_k \sim \textrm{Dirichlet}(1,1,\ldots,1)$ in a given pool $k$,  for the biological sample $j$ (with $A_{jk}=1$), $\E{W_{jk}} = 1/q$ and $\var{W_{jk}} = \frac{q-1}{q^2(q+1)}$. 
+	
+	Therefore, based on these results
+	\begin{equation*}
+	\begin{aligned}
+	\E{Y_k} &= \sum_{j=1}^n \E{A_{jk}} \E{W_{jk}} \E{U_j} + \E{\eps_k}\\
+	          &= \sum_{j=1}^n \frac{q}{n}\frac{1}{q}\mu_j = \frac{1}{n}\sum_{j=1}^n\mu_j.
+	\end{aligned}
+	\end{equation*}
+	
+For the variance, upon using the result that for $n$ independent random variables $X_1, X_2, \ldots X_n$, $\var{\prod_{i=1}^nX_i} = \prod_{i=1}^n\left(\var{X_i}+\E{X_i}^2\right)-\prod_{i=1}^n\E{X_i}^2$, we find 
+	 
+	 \begin{align*} 
+	 \var{Y_k} &= \sum_{j=1}^n \var{A_{jk}\times W_{jk}\times U_j} + \var{\eps_k}\\
+	 &= \sum_{j=1}^n\left[\left\{\var{A_{jk}}+\E{A_{jk}}^2\right\} \left\{\var{W_{jk}}+\E{W_{jk}}^2\right\} \left\{\var{U_j}+\E{U_j}^2\right\} - \right. \\
+	 &\left.\;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\; \E{A_{jk}}^2\E{W_{jk}}^2\E{U_j}^2\right] +\sigma^2\\
+	 &= \sum_{j=1}^n\left[\left\{\frac{q(n-q)}{n^2}+\frac{q^2}{n^2}\right\} \left\{\frac{q-1}{q^2(q+1)}+\frac{1}{q^2}\right\} \left\{\sigma_j+\mu_j^2\right\} - \frac{q^2}{n^2}\frac{1}{q^2}\mu_j^2\right] +\sigma^2\\
+	 &=\frac{1}{n(q+1)}\sum_{j=1}^n (\sigma^2_j+\mu^2_j) -\frac{1}{n^2}\sum_{j=1}^n\mu^2_j + \sigma^2.
+	 \end{align*} 
+\end{proof}
+
+If $U_j\sim \textrm{Negative Binomial}(\mu_j, \phi)$, where $\mu_j = \rho L^0_j$, $\rho$ is the relative abundance, $L^0_j$ is the library size in biological sample $j$ (virtual library size), $\phi$ is the over-dispersion parameter, then, $\var{U_j}=\sigma^2_j = \mu_j+\phi\mu_j^2$. Therefore, the mean and variance of $Y_k$ becomes, 
+
+\begin{equation}
+\E{Y_k} =\frac{1}{n}\sum_{j=1}^n\mu_j 
+\label{eq:expYkNB}
+\end{equation}
+
+\begin{equation}
+\var{Y_k} =\frac{1}{n(q+1)}\sum_{j=1}^n(\mu_j+(\phi+1)\mu_j^2)  -  \frac{1}{n^2}\sum_{j=1}^n\mu_j^2+ \sigma^2.
+\label{eq:varYkNB}
+\end{equation}
+
+To verify the mean and variance of $Y_k$ (also the coefficient of variation) based on the expressions in \eqref{eq:expYkNB} and \eqref{eq:varYkNB}, we set up a Monte-Carlo (MC) simulation with 2000 runs. In a given MC simulation $i,\; i=1,2,\dots,2000$, generate $n=60$ read counts from negative binomial distribution $U_j^{(i)}\sim\textrm{NB}(\mu_j, \phi)$ and subsequently generates $Y_k^{(i)}$ using the data generating model (see equation (1) in the manuscript) for a pool size $q$. In a single MC simulation run $i$, the mean and variance of $Y_k^{(i)}$ are estimated by $\bar Y_i = m^{-1}\sum_{k=1}^m Y_k^{(i)}$ and $S^2_i =(m-1)^{-1}\sum_{k=1}^m\left(Y_k^{(i)}-\bar Y_i\right)^2$, respectively. Afterwards, the $\E{Y_k}\approx  2000^{-1}\sum_{i=1}^{2000} \bar Y_i$ and $\var{Y_k}\approx  2000^{-1}\sum_{i=1}^{2000} S^2_i$. Different choices of $\mu_j$, $\phi$, and $q$ were considered. The results in Figure \ref{fig:MCsim1} show that the expressions in \eqref{eq:expYkNB} and \eqref{eq:varYkNB} are equivalent to the their corresponding MC approximations. This confirms that the expressions in \eqref{eq:expYkNB} and \eqref{eq:varYkNB} describe the true mean and variance of $Y_k$, respectively.
+ 
+
+```{r, echo=FALSE, eval=FALSE, "MC approximation"}
+source("Global files/poolCodes.R")
+source("Global files/additional_functions.R")
+library(MCMCpack) # for Drichilet distribution
+
+
+
+# ---------- dispersion = 0.5 ------------------------------------------------------------
+
+n    <- 60
+muj  <- rgamma(n, 1, 0.1)
+disp <- 0.5
+alp=1  #Drichilet parameter
+ 
+Q <- c(2:n)[sapply(2:n, function(i) n%%i==0 & n!=i)]
+
+tht <- as.data.frame(t(sapply(Q, function(q){
+  #var.y = ((alp+1)/(n*(q*alp+1)))*sum(muj+(disp+1)*(muj^2)) - sum((muj^2))/(n^2) 
+  var.y = sum((VA(q, n)+EA(q, n)^2)*(VW(q, alp)+EW(q)^2)*(muj+(disp+1)*muj^2) 
+                  - (EA(q, n)^2)*(EW(q)^2)*(muj^2))
+  c(mean.y=mean(muj), var.y=sqrt(var.y), cv.y=sqrt(var.y)/mean(muj), q=q, m=n/q)
+})))
+  
+B <- 2000
+mcs <- as.data.frame(do.call(rbind, lapply(Q, function(q){
+  m <- n/q
+   
+ est=t(sapply(1:B, function(i){ 
+   U <- sapply(muj, function(m) rnbinom(1, mu=m, size=1/disp))
+   A <- creatAmatV2(nr = m, nc = n, q = q, shuffle = TRUE)
+   y <- numeric(m)
+   w <- rdirichlet(1, alpha = rep(alp, q))
+   for(k in 1:m){ 
+     y[k] <- sum(U[A[k,]==1]*w)
+   }
+   #y
+   c(mean.y=mean(y), var.y=sd(y), cv.y=sd(y)/mean(y), q=q, m=m)
+ }))
+ est
+ #data.frame(mean.y=colMeans(est), var.y=apply(est, 2, var), cv.y=apply(est, 2, cv), q=q, m=m)
+})))
+ 
+saveRDS(list(mcs=mcs, tht=tht), "manuscript/V1/suppl_results/MCaprox/MonteCarloSim1.rds")
+
+
+# ---------- dispersion = 2 ------------------------------------------------------------
+
+n    <- 60
+muj  <- rgamma(n, 1, 0.1)
+disp <- 2
+alp=1  #Drichilet parameter
+ 
+Q <- c(2:n)[sapply(2:n, function(i) n%%i==0 & n!=i)]
+
+tht <- as.data.frame(t(sapply(Q, function(q){
+  #var.y = ((alp+1)/(n*(q*alp+1)))*sum(muj+(disp+1)*(muj^2)) - sum((muj^2))/(n^2) 
+  var.y = sum((VA(q, n)+EA(q, n)^2)*(VW(q, alp)+EW(q)^2)*(muj+(disp+1)*muj^2) 
+                  - (EA(q, n)^2)*(EW(q)^2)*(muj^2))
+  c(mean.y=mean(muj), var.y=sqrt(var.y), cv.y=sqrt(var.y)/mean(muj), q=q, m=n/q)
+})))
+
+
+B <- 2000
+mcs <- as.data.frame(do.call(rbind, lapply(Q, function(q){
+  m <- n/q
+   
+ est=t(sapply(1:B, function(i){ 
+   U <- sapply(muj, function(m) rnbinom(1, mu=m, size=1/disp))
+   A <- creatAmatV2(nr = m, nc = n, q = q)
+   y <- numeric(m)
+   w <- rdirichlet(1, alpha = rep(alp, q))
+   for(k in 1:m){ 
+     y[k] <- sum(U[A[k,]==1]*w)
+   }
+  #y
+   c(mean.y=mean(y), var.y=sd(y), cv.y=sd(y)/mean(y), q=q, m=m)
+ }))
+ est
+ #data.frame(mean.y=colMeans(est), var.y=apply(est, 2, var), cv.y=apply(est, 2, cv), q=q, m=m)
+})))
+
+saveRDS(list(mcs=mcs, tht=tht), "manuscript/V1/suppl_results/MCaprox/MonteCarloSim2.rds")
+
+
+# ---------- dispersion = 5 ------------------------------------------------------------
+
+n    <- 60
+muj  <- rgamma(n, 1, 0.1)
+disp <- 1
+alp=1  #Drichilet parameter
+ 
+Q <- c(2:n)[sapply(2:n, function(i) n%%i==0 & n!=i)]
+
+tht <- as.data.frame(t(sapply(Q, function(q){
+  #var.y = ((alp+1)/(n*(q*alp+1)))*sum(muj+(disp+1)*(muj^2)) - sum((muj^2))/(n^2) 
+  var.y = sum((VA(q, n)+EA(q, n)^2)*(VW(q, alp)+EW(q)^2)*(muj+(disp+1)*muj^2) 
+                  - (EA(q, n)^2)*(EW(q)^2)*(muj^2))
+  c(mean.y=mean(muj), var.y=sqrt(var.y), cv.y=sqrt(var.y)/mean(muj), q=q, m=n/q)
+})))
+
+
+B <- 2000
+mcs <- as.data.frame(do.call(rbind, lapply(Q, function(q){
+  m <- n/q
+   
+ est=t(sapply(1:B, function(i){ 
+   U <- sapply(muj, function(m) rnbinom(1, mu=m, size=1/disp))
+   A <- creatAmatV2(nr = m, nc = n, q = q)
+   y <- numeric(m)
+   w <- rdirichlet(1, alpha = rep(alp, q))
+   for(k in 1:m){ 
+     y[k] <- sum(U[A[k,]==1]*w)
+   }
+   #y
+   c(mean.y=mean(y), var.y=sd(y), cv.y=sd(y)/mean(y), q=q, m=m)
+ }))
+ est
+ #data.frame(mean.y=colMeans(est), var.y=apply(est, 2, var), cv.y=apply(est, 2, cv), q=q, m=m)
+})))
+
+saveRDS(list(mcs=mcs, tht=tht), "manuscript/V1/suppl_results/MCaprox/MonteCarloSim3.rds")
+```
+
+```{r, echo=FALSE, fig.width=12, fig.height=12, fig.cap="\\label{fig:MCsim1} The Monte-Carlo and the analytical estimate of the mean ($\\mu_Y$), standard deviation ($\\sigma_Y$) and coeffcient of variation ($\\sigma_Y/\\mu_Y$) of $Y_k$ at different pool size (q). ", fig.pos='h'}
+
+mcs0p5phi <- readRDS("manuscript/V1/suppl_results/MCaprox/MonteCarloSim1.rds")
+mcs2phi   <- readRDS("manuscript/V1/suppl_results/MCaprox/MonteCarloSim2.rds")
+mcs5phi   <- readRDS("manuscript/V1/suppl_results/MCaprox/MonteCarloSim3.rds")
+ 
+Q <- mcs0p5phi$tht$q
+
+par(mfrow=c(3,3), cex.lab=1.5)
+boxplot(mcs0p5phi$mcs$mean.y~mcs0p5phi$mcs$q, xlab="q", ylab=expression(mu[Y[k]]), 
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==0.5)) 
+points(1:length(Q), tapply(mcs0p5phi$mcs$mean.y, mcs0p5phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs0p5phi$tht$mean.y, col=2, type = 'b', pch=16, cex=1.5)
+legend("topleft", c("MC approximation", "Theoretical"), col=c(1,2), lty=1, lwd=2, cex=1.25)
+
+boxplot(mcs0p5phi$mcs$var.y~mcs0p5phi$mcs$q, xlab="q", ylab=expression(sigma[Y[k]]),
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==0.5)) 
+points(1:length(Q), tapply(mcs0p5phi$mcs$var.y, mcs0p5phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs0p5phi$tht$var.y, col=2, type = 'b', pch=16, cex=1.5)
+
+boxplot(mcs0p5phi$mcs$cv.y~mcs0p5phi$mcs$q, xlab="q", ylab=expression(sigma[Y[k]]/mu[Y[k]]),
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==0.5)) 
+points(1:length(Q), tapply(mcs0p5phi$mcs$cv.y, mcs0p5phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs0p5phi$tht$cv.y, col=2, type = 'b', pch=16, cex=1.5)
+
+
+
+
+boxplot(mcs2phi$mcs$mean.y~mcs2phi$mcs$q, xlab="q", ylab=expression(mu[Y[k]]), 
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==2)) 
+points(1:length(Q), tapply(mcs2phi$mcs$mean.y, mcs2phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs2phi$tht$mean.y, col=2, type = 'b', pch=16, cex=1.5)
+
+boxplot(mcs2phi$mcs$var.y~mcs2phi$mcs$q, xlab="q", ylab=expression(sigma[Y[k]]),
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==2)) 
+points(1:length(Q), tapply(mcs2phi$mcs$var.y, mcs2phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs2phi$tht$var.y, col=2, type = 'b', pch=16, cex=1.5)
+
+boxplot(mcs2phi$mcs$cv.y~mcs2phi$mcs$q, xlab="q", ylab=expression(sigma[Y[k]]/mu[Y[k]]),
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==2)) 
+points(1:length(Q), tapply(mcs2phi$mcs$cv.y, mcs2phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs2phi$tht$cv.y, col=2, type = 'b', pch=16, cex=1.5)
+
+
+
+boxplot(mcs5phi$mcs$mean.y~mcs5phi$mcs$q, xlab="q", ylab=expression(mu[Y[k]]), 
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==5)) 
+points(1:length(Q), tapply(mcs5phi$mcs$mean.y, mcs5phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs5phi$tht$mean.y, col=2, type = 'b', pch=16, cex=1.5)
+
+boxplot(mcs5phi$mcs$var.y~mcs5phi$mcs$q, xlab="q", ylab=expression(sigma[Y[k]]),
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==5)) 
+points(1:length(Q), tapply(mcs5phi$mcs$var.y, mcs5phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs5phi$tht$var.y, col=2, type = 'b', pch=16, cex=1.5)
+
+boxplot(mcs5phi$mcs$cv.y~mcs5phi$mcs$q, xlab="q", ylab=expression(sigma[Y[k]]/mu[Y[k]]),
+        main=expression(mu[j]~"~"~Gamma(1, 0.1)~~~~phi==5)) 
+points(1:length(Q), tapply(mcs5phi$mcs$cv.y, mcs5phi$mcs$q, mean), col=4, pch=16, cex=1.5)
+lines(1:length(Q), mcs5phi$tht$cv.y, col=2, type = 'b', pch=16, cex=1.5)
+
+ 
+box("outer")
+```
+
+
+```{r, eval=FALSE,echo=FALSE, fig.width=12, fig.height=7, fig.cap="\\label{fig:illust1} The relationship between pool size ($q$) and variance of $Y_k$ obtained using n i.i.d. $U_{j}$ from NB distribution with mean ($\\mu$) and dispersion ($\\phi$). The dashed line indicates the standard deviation of $Y_k$, whereas the solid line indicates the standard deviation of $U_j$.", fig.pos='h'}
+source("Global files/additional_functions.R")
+par(mfrow=c(2,4), mar=c(4, 4, 4, 1), oma=c(2,2,0,0))
+Q <- 2:10
+mu.U = c(0.5, 1, 10, 100)
+# plot(q, seq(0, 200, length.out = length(q)), type="n")
+for(i in 1:4){
+  disp  <- 2
+  var.U <- mu.U[i]+disp*(mu.U[i]^2)
+  
+  var.er <-  0.5
+  alp <- 1 
+  n <- 50 
+  
+  var.Y <- (2/(Q+1))*(var.U + mu.U[i]^2) - (mu.U[i]^2)/n + var.er
+  # var.Y = sapply(Q, function(q){
+  #   sum((VA(q, n)+EA(q, n)^2)*(VW(q, alp)+EW(q)^2)*(muj[i]+(disp+1)*(muj[i]^2)) 
+  #       - (EA(q, n)^2)*(EW(q)^2)*(muj[i]^2))+ var.er
+  # })
+  
+  plot(Q, sqrt(var.Y), col="deepskyblue4", lty=2, lwd=3, type="l", ylab="",
+       main = bquote(mu==.(mu.U[i])~~~phi==.(disp)), xlab="", cex.lab=1.5,
+       ylim=c(min(sqrt(var.Y), var.U), max(sqrt(var.Y), sqrt(var.U))))
+  abline(h=sqrt(var.U), col="deepskyblue4", lwd=3)
+  if(i==1){
+    legend("topright", legend = c(expression(sigma[U]), expression(sigma[Y])), 
+           lty=c(1,2), col=1, cex=2, lwd=3)
+  }
+}
+
+disp = c(0.5, 1, 5, 10)
+# plot(q, seq(0, 200, length.out = length(q)), type="n")
+for(i in 1:4){
+  mu.U <- 2
+  var.U <- mu.U+disp[i]*(mu.U^2)
+  
+  var.er <-  0.5
+  alp <- 1 
+  n <- 50 
+  
+  var.Y <- (2/(Q+1))*(var.U + mu.U^2) - (mu.U^2)/n + var.er
+  # var.Y = sapply(Q, function(q){
+  #   sum((VA(q, n)+EA(q, n)^2)*(VW(q, alp)+EW(q)^2)*(muj+(disp[i]+1)*muj^2) 
+  #                 - (EA(q, n)^2)*(EW(q)^2)*muj^2)+ var.er
+  # })
+  plot(Q, sqrt(var.Y), col="deepskyblue4", lty=2, lwd=3, type="l",ylab="",
+       main = bquote(mu==.(mu.U)~~~phi==.(disp[i])), xlab="", cex.lab=1.5,
+       ylim=c(min(sqrt(var.Y), var.U), max(sqrt(var.Y), sqrt(var.U))))
+  abline(h=sqrt(var.U), col="deepskyblue4", lwd=3)
+}
+title(outer = TRUE, xlab="pool size (q)", ylab="standard deviation", line=0, cex.lab=2)
+box("outer")
+```
+
+
+
+## Estimation of the relative abundance and log-fold-change
+
+The moment estimator of the relative abundance $\rho$ of a particular gene based on the gene expressions $U_j$ from the $n$ individual biological samples, is given by
+\begin{equation}
+\hat\rho = \frac{\sum_{j=1}^nU_j}{L_0},
+\label{eq:rho.hat}
+\end{equation} 
+
+where $L_0 = \sum_{j=1}^nL^o_j$ is the total virtual library sizes, and $L_j^o$ is the virtual library size in biological sample $j$. Similarly, we can drive the moment estimator of $\rho$ based on gene expressions from the pooled samples $Y_k, k=1,2,\ldots,m$ starting from the sample mean of $Y_k$. That is, $\bar Y = \frac{1}{m}\sum_{k=1}^mY_k \Rightarrow \E{\bar Y} = \frac{1}{n}\rho L_0$, and hence
+
+\begin{equation}
+\hat\rho = \frac{q}{L_0}\sum_{k=1}^mY_k.
+\label{eq:rho.hat.star}
+\end{equation} 
+
+Note that, $\E{\sum_{k=1}^mL_k} = L_0/q$. Consequenty, $\hat\rho$ in equation \eqref{eq:rho.hat.star} can be rewritten as $\hat\rho = \frac{\sum_{k=1}^mY_k}{\E{\sum_{k=1}^mL_k}}$.
+
+
+Now we compare the expectation and variance of $\hat{\rho}$ from the the standard experiment \eqref{eq:rho.hat} and the pooled experiments \eqref{eq:rho.hat.star}. For this purpose, let $\hat\rho$ and $\hat\rho^*$  denote the estimates of the relative abundance from the standard and pooled experiment, respectively. Since we have used the moment estimators of $\rho$ for both settings, it immediately follows that 
+$\E{\hat\rho} = \E{\hat\rho^*} = \rho$.
+
+It can be shown that
+\begin{equation}
+\var{\hat\rho} = \frac{1}{L_0^2}\sum_{j=1}^n\sigma^2_j.
+\label{eq:rho.hat.var}
+\end{equation} 
+
+Using equation (3) of the main manuscript,
+\begin{equation}
+\begin{aligned}
+\var{\hat\rho^*} &=  \frac{q^2}{L_0^2} \sum_{k=1}^m\var{Y_k}\\
+&= \frac{2q}{L_0^2(q+1)}\sum_{j=1}^n (h\mu^2_j+\sigma^2_j)  + \frac{nq}{L_0^2}\sigma^2\\
+&= \frac{2q}{q+1}\var{\hat\rho} + \frac{2q}{(q+1)L_0}h\rho + \frac{mq}{L_0^2}\sigma^2.
+\end{aligned}
+\label{eq:rho.hat.star.var}
+\end{equation} 
+
+The right two terms of \eqref{eq:rho.hat.star.var} are nearly 0 (division by very large numbers $L_0$ and $L_0^2$) and have a negligible contribution to $\var{\hat\rho^*}$. Consequently, we find
+\begin{equation}
+\frac{\var{\hat\rho^*}}{\var{\hat\rho}} \ge  \frac{2q}{q+1}.
+\label{eq:rho.hat.var.compare}
+\end{equation} 
+
+The expression in \eqref{eq:rho.hat.var.compare} implies that pooling leads to an estimate of the relative abundance which is at least $2q/(q+1)$ times more variable than the estimate we can obtain without pooling. 
+
+
+In DGE analysis, one essential statistic is the estimate of the biological effect (effect size). In many parametric methods, the log-fold-change (LFC) is commonly used to caliberate the biological effect size. As a result, we compare the LFC estimates from the standard and the pooled experiments. For testing DGE between two independent groups, the LFC of a particular gene is defined as $\theta =\log\frac{\rho_2}{\rho_1}$, where $\rho_k$ is the relative abundance in group $k\in\{1,2\}$. The estimate of $\theta$ for the standard experiment is given by $\hat\theta = \log\frac{\hat\rho_2}{\hat\rho_1}$ and for the pooled experiments $\hat\theta^* = \log\frac{\hat\rho^*_2}{\hat\rho^*_1}$.
+
+
+Using the second-order Taylor expansion (the Delta method), we can approximate the variance of $\hat\theta$ and $\hat\theta^*$ as 
+
+\begin{equation}
+\var{\hat\theta} \approx \frac{\var{\hat\rho_2}}{\rho^2_2} + \frac{\var{\hat\rho_1}}{\rho^2_1},
+\label{eq:theta.hat}
+\end{equation}
+and
+\begin{equation}
+\var{\hat\theta^*} \approx \frac{\var{\hat\rho_2^*}}{\rho^2_2} + \frac{\var{\hat\rho_1^*}}{\rho^2_1}.
+\label{eq:theta.hat.star}
+\end{equation}
+
+Therefore, it follows that 
+\begin{equation}
+\frac{\var{\hat\theta^*}}{\var{\hat\theta}} \ge \frac{2q}{q+1}
+\label{eq:theta.hat.compare}
+\end{equation}
+This also indicates that the LFC estimate from pooled experiments is at least $2q/(q+1)$ times more variable than that of the standard experiment. This is an important characteristic that affects the statistical power of a DGE test as shown in the next section.
+ 
+
+
+## Power calculation
+
+Assume there is no pooling and we want to test for DGE between two independent groups of biological samples. Let $U_{jk}$ denotes the read counts in biological sample $j=1,2,\ldots, n_k$ of group $k\in{1,2}$. Again we assume that $U_{jk} \sim \textrm{Negative Binomial}(\mu_{jk}, \phi)$, where $\phi$ is the over-dispersion parameter (assumed to be constant for all samples and all groups), and $\mu_{jk}=\E{U_{jk}}=\rho_kL^0_{jk}$, where $\rho_k$ is the relative abundance in group $k$ and $L^0_{jk}$ is the library size of biological sample $j$ in group $k$. Let $A_{jk}$ be the group label of $U_{jk}$, such that $A_{jk}=0$ if $k=1$ and $A_{jk}=1$ if $k=2$. $n_k$ denotes the number of biological samples in group $k$, with $n=n_1+n_2$. We want to test the null hypothesis $H_0: \rho_1=\rho_2$ against the alternative $H_A: \rho_1\ne\rho_2$ at the $\alpha$ level of significance. In this section, we will calculate the statistical power of testing this hypothesis based on the method discussed in @zhu2014sample.
+ 
+
+We can fit the following negative binomial regression with $L_{jk}^0$ as offset,
+
+\begin{equation}
+\log{\mu_{jk}} = \log\{\rho_k L_{jk}^0\} =\beta_0+\beta_1A_{jk} + \log{L_{jk}^0},
+\label{eq:nb_model}
+\end{equation} 
+
+where $\beta_0$ is the intercept and $\beta_1$ is the coefficient of the factor $A$. In this model, the parameter $\beta_1$ represents the LFC between the two groups, that is $\beta_1 = \log\frac{\rho_2}{\rho_1}$. This means, $\beta_1$ is equivalent to the LFC parameter introduced earlier as $\theta$. Therefore, we can rewrite the hypothesis of DE as $H_0: \beta_1=0$ against the alternative $H_A: \beta_1\ne0$. 
+
+If $\hat\beta_1$ is the maximum-likelihood estimator of $\beta_1$ (under $H_A$), then the variance of $\hat\beta_1$ is given by
+
+\begin{equation}
+\var{\hat\beta_1} = \frac{1}{n_1}\left[\frac{1}{\bar L^o}\left(\frac{1}{\rho_1}+\frac{1}{R\rho_2}\right)+\frac{(1+R)\phi}{R}\right] = \frac{1}{n_1}V_A,
+\label{eq:var_beta1}
+\end{equation} 
+
+where $R =n_2/n_1$, $\bar L^o = n^{-1}L_0$ (the mean library size across all biological samples). It is also easy to show that $\var{\hat\beta_1}=\var{\hat\theta}$, shown in \eqref{eq:theta.hat}. Under the null hypotsis,   
+ \begin{equation}
+\var{\hat\beta_1} = \frac{1}{n_1}\left[\frac{1}{\bar L^o}\left(\frac{1}{\tilde\rho_1}+\frac{1}{R\tilde\rho_2}\right)+\frac{(1+R)\phi}{R}\right] = \frac{1}{n_1}V_0,
+\label{eq:var_beta1_h0}
+\end{equation} 
+where $\tilde\rho_1$ and $\tilde\rho_2$ are the true relative abundances under $H_0$, such that $\tilde\rho_1=\tilde\rho_2 =\rho_1$. 
+
+Recall that our objective is to determine the power of testing the above hypothesis using the pooled experiment. Therefore, let $\hat\beta^*_1$ is the estimate of $\beta_1$ using the gene expression data from the pooled samples. $\hat\beta^*_1$ is the equivalent LFC in the pooled experiment, which was denoted by $\hat\theta^*$ earlier, i.e $\hat\beta^*_1=\hat\theta^*$. In \eqref{eq:theta.hat.compare}, we have established that $\var{\hat\theta^*} \ge \var{\hat\theta}\frac{2q}{q+1}$. Consequently, under the alternative hypothesis $\var{\hat\beta_1^*} \ge \frac{2q}{q+1}\var{\hat\beta_1}$ and under the null hypothesis $\var{\hat\beta_1^*}\rvert_{H_0} \ge \frac{2q}{q+1}\var{\hat\beta_1}\rvert_{H_0}$. 
+
+Therefore, given the pool size ($q$), the number of RNA samples in groups 1 and 2 ($n_1$ and $n_2$, respectively), the effect size to be detected $\theta$, and over-dispersion $\phi$, the power of the two-sided likelihood ratio test at significance level $\alpha$ can be calculated as,
+
+\begin{equation}
+\textrm{power} \le  \Phi\left(\frac{\sqrt{n_1(q+1)}|\theta|-Z_{\alpha/2}\sqrt{2qV_0}}{\sqrt{2qV_A}}\right),
+\label{eq:power}
+\end{equation} 
+where $\Phi(.)$ is the cumulative standard normal distribution, and $Z_{\alpha/2}$ is the $(1-\alpha/2)100\%$ quantile of the standard normal distribution. Note that in pooled experiments, $n_1$ and $n_2$ are the number of RNA samples before library prepartion.
+
+In Figure \ref{power_cost_A} and \ref{power_cost_B}, we present the relationship between the power and the total cost of data generation for different experimental design, including the sample pooling. In particular, we compare three cost-saving strategies and a reference scenario (the full budget experiment). These are
+\begin{itemize}
+  \item \textit{reference}: contains a total of $n$ biological samples from two groups (each with $n/2$ samples) and there is no pooling. The average library size per sample is $20\times10^6$. The total cost is $C_t = C_{SP}\times n + C_{LP}\times n + C_S\times L_0$, where $C_{SP},\; C_{LP},\; \& \:C_S$ are sample preparation cost, library preparation cost and sequencing cost per $10^6$, respectively. 
+  
+  \item \textit{Strategy A}: pooling experiment with pool size $q$. The $n/2$ RNA samples in each group are pooled to $m$ pools $m=n/2q$ with average library size per pool is $20\times10^6$. Hence, the total cost is $C_t = C_{SP}\times n + C_{LP}\times 2m + C_S\times L_0/q$. This strategy reduces the library preparation and sequencing costs.
+    \item \textit{Strategy B}: reducing the number of biological samples ($n$) without pooling. Instead of the $n$ total number of samples (in the reference design) we use $n_s$ samples with $n_s/2$ per group with average library size per samples is $20\times10^6$. Hence, the total cost is $C_t = C_{SP}\times n_s + C_{LP}\times n_s + C_S\times (nL_0/n_s)$. This strategy reduces the sample preparation, library preparation and sequencing costs.
+    \item \textit{Strategy C}: reducing the sequencing depth. This is similar to the reference scenario, except that the average library size is reduced to $L$, where $L < 20\times10^6$. Hence, this strategy reduces only the sequencing cost  by a factor $l$, $l=20\times10^6/L$. 
+\end{itemize}
+
+```{r, echo=FALSE,  "power calculation function"}
+calcPower_and_Cost <- function(alpha=0.05, rho1, rho2=NULL,  exp.theta=NULL, mean.L=20e6,
+                       n1, n2=n1, q=2, phi, Cs=20, Cl=100, Cr=7.5){
+ R <- n2/n1
+ if(is.null(rho2) & is.null(exp.theta)){
+   stop("both rho1 and exp.theta can not e NULL!")
+ }
+ else if(is.null(rho2)){
+   rho2 <- rho1*exp.theta
+ }
+ else{
+   exp.theta <- rho2/rho1
+ }
+ 
+ rho.0 <- (n1*rho1+n2*rho2)/(n1+n2)
+ 
+ Valt  <- ((1/mean.L)*(1/rho1+1/(R*rho2)) + phi*(1+R)/R)*2*q/(q+1)
+ Vnull <- ((1/mean.L)*(1/rho.0+1/(R*rho.0)) + phi*(1+R)/R)*2*q/(q+1) #((1+R)/(mean.L*R*rho1) + phi*(1+R)/R)*2*q/(q+1)
+ 
+ Zalpha2 <- qnorm(1-alpha/2)
+ num <- sqrt(n1)*abs(log(exp.theta)) - Zalpha2*sqrt(Vnull)
+ prob <- pnorm(num/sqrt(Valt))
+ prob
+ 
+ Ns <- n1+n2
+ Nl <- Ns/q
+ R  <- mean.L*Nl
+ tot.cost <-(Ns*Cs + Nl*Cl + Cr*R/1e6)
+ 
+ list(power=prob, total.cost=tot.cost)
+} 
+```
+
+ 
+
+```{r, echo=FALSE, fig.width=12, fig.height=12, fig.cap="\\label{power_cost_A} Zodiac plot representing power (at 5\\% significance level) versus the total cost of data generation. The gene expression levels are generated from NB$(\\rho L_j, \\phi)$. This particular plot is for a gene with relative abundace of $\\rho=10^{-7}$ (low--abundance gene) in one of the groups. The reference strategy (denoted by a diamond shape) contains $n=120$ biological samples (without pooling) with a mean library size of $20\\times 10^6$ per sample. Each panel represents a different LFC ($\\theta$) between the two groups and over-dispersion parameter $\\phi$ (reflecting biological variability). The relative cost is determined as the total cost of each strategy divided by the total cost of the reference design."} 
+lfc  <- list(S=0.5, L=1.0) 
+rho1 <- 10^-7
+n1   <- 60
+phi  <- list(S=0.5, L=2)
+LS.frac <- c(0.5e6, 1e6, 5e6, 10e6)
+alpha<- 0.05
+Q <- c(2,3,4, 6)
+
+# small LFC, small phi
+pwr_lfcS_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcS_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcS_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$S)
+pwr_lfcS_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+
+# small LFC, large phi
+pwr_lfcS_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcS_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcS_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcS_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+
+
+# large LFC, small phi
+pwr_lfcL_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcL_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcL_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$S) 
+pwr_lfcL_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+
+
+
+# large LFC, large phi
+pwr_lfcL_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcL_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcL_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcL_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+
+
+#png(filename = "manuscript/V1/power_cost_design_B.png", width = 25, height = 30, res = 400, units = "cm")
+par(mfrow=c(2,2),  oma=c(2, 2, 2, 0), mar=c(3,3,3,0.1), col="gray", cex.main=1.5)
+ref.cost <- pwr_lfcS_phiS_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==0.5~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray85", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiS_pool$total.cost/ref.cost, pwr_lfcS_phiS_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcS_phiS_subL$total.cost/ref.cost, pwr_lfcS_phiS_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcS_phiS_pool$total.cost/ref.cost,  pwr_lfcS_phiS_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcS_phiS_subL$total.cost/ref.cost,  pwr_lfcS_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+legend(0.7,0.4, "reference", pch=18, col=1, pt.cex=2, text.col=1, cex=1.5, bty="o")
+legend(0.7,0.3, c("strategy A", "strategy B", "strategy C"), pch=1, lty=1, 
+       col=c(4, 2, "gray"), pt.cex=2, text.col=1, cex=1.5, bty="o", lwd=3)
+
+ref.cost <- pwr_lfcS_phiL_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==0.5~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiL_pool$total.cost/ref.cost, pwr_lfcS_phiL_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcS_phiL_subL$total.cost/ref.cost, pwr_lfcS_phiL_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcS_phiL_pool$total.cost/ref.cost,  pwr_lfcS_phiL_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcS_phiL_subL$total.cost/ref.cost,  pwr_lfcS_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiS_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==1~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiS_pool$total.cost/ref.cost, pwr_lfcL_phiS_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcL_phiS_subL$total.cost/ref.cost, pwr_lfcL_phiS_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcL_phiS_pool$total.cost/ref.cost,  pwr_lfcL_phiS_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcL_phiS_subL$total.cost/ref.cost,  pwr_lfcL_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiL_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==1~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiL_pool$total.cost/ref.cost, pwr_lfcL_phiL_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcL_phiL_subL$total.cost/ref.cost, pwr_lfcL_phiL_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcL_phiL_pool$total.cost/ref.cost,  pwr_lfcL_phiL_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcL_phiL_subL$total.cost/ref.cost,  pwr_lfcL_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+
+title(xlab = "relative cost", ylab = "power", outer = TRUE, line=1, cex.lab=2)
+box("outer", col="gray")
+#dev.off()
+```
+
+```{r, echo=FALSE, fig.width=12, fig.height=12, fig.cap="\\label{power_cost_B} Zodiac plot representing power (at 5\\% significance level) versus the total cost of data generation. The gene expression levels are generated from NB$(\\rho L_j, \\phi)$. This particular plot is for a gene with relative abundace of $\\rho=10^{-6}$ (moderate level of expression) in one of the groups. The reference strategy (denoted by a diamond shape) contains $n=120$ biological samples (without pooling) with a mean library size of $20\\times 10^6$ per sample. Each panel represents a different LFC ($\\theta$) between the two groups and over-dispersion parameter $\\phi$ (reflecting biological variability). The relative cost is determined as the total cost of each strategy divided by the total cost of the reference design."} 
+lfc  <- list(S=0.5, L=1.0) 
+rho1 <- 10^-6
+n1   <- 60
+phi  <- list(S=0.5, L=2)
+LS.frac <- c(0.5e6, 1e6, 5e6, 10e6)
+alpha<- 0.05
+Q <- c(2,3,4, 6)
+
+# small LFC, small phi
+pwr_lfcS_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcS_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcS_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$S)
+pwr_lfcS_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+
+# small LFC, large phi
+pwr_lfcS_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcS_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcS_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcS_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+
+
+# large LFC, small phi
+pwr_lfcL_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcL_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcL_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$S) 
+pwr_lfcL_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+
+
+
+# large LFC, large phi
+pwr_lfcL_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcL_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcL_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcL_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+
+
+#png(filename = "manuscript/V1/power_cost_design_B.png", width = 25, height = 30, res = 400, units = "cm")
+par(mfrow=c(2,2),  oma=c(2, 2, 2, 0), mar=c(3,3,3,0.1), col="gray", cex.main=1.5)
+ref.cost <- pwr_lfcS_phiS_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==0.5~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray85", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiS_pool$total.cost/ref.cost, pwr_lfcS_phiS_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcS_phiS_subL$total.cost/ref.cost, pwr_lfcS_phiS_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcS_phiS_pool$total.cost/ref.cost,  pwr_lfcS_phiS_pool$power, labels = paste0("q=", Q),
+     pos=1, cex=1.0, col=4)
+text(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcS_phiS_subL$total.cost/ref.cost,  pwr_lfcS_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=3, cex=1.0, col=1)
+legend(0.7,0.4, "reference", pch=18, col=1, pt.cex=2, text.col=1, cex=1.5, bty="o")
+legend(0.7,0.3, c("strategy A", "strategy B", "strategy C"), pch=1, lty=1, 
+       col=c(4, 2, "gray"), pt.cex=2, text.col=1, cex=1.5, bty="o", lwd=3)
+
+
+ref.cost <- pwr_lfcS_phiL_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==0.5~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiL_pool$total.cost/ref.cost, pwr_lfcS_phiL_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcS_phiL_subL$total.cost/ref.cost, pwr_lfcS_phiL_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcS_phiL_pool$total.cost/ref.cost,  pwr_lfcS_phiL_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcS_phiL_subL$total.cost/ref.cost,  pwr_lfcS_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=3, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiS_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==1~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiS_pool$total.cost/ref.cost, pwr_lfcL_phiS_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcL_phiS_subL$total.cost/ref.cost, pwr_lfcL_phiS_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcL_phiS_pool$total.cost/ref.cost,  pwr_lfcL_phiS_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=1, cex=1.0, col=2)
+text(pwr_lfcL_phiS_subL$total.cost/ref.cost,  pwr_lfcL_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=1, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiL_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==1~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiL_pool$total.cost/ref.cost, pwr_lfcL_phiL_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcL_phiL_subL$total.cost/ref.cost, pwr_lfcL_phiL_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcL_phiL_pool$total.cost/ref.cost,  pwr_lfcL_phiL_pool$power, labels = paste0("q=", Q),
+     pos=1, cex=1.0, col=4)
+text(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcL_phiL_subL$total.cost/ref.cost,  pwr_lfcL_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=3, cex=1.0, col=1)
+
+title(xlab = "relative cost", ylab = "power", outer = TRUE, line=1, cex.lab=2)
+box("outer", col="gray")
+#dev.off()
+```
+
+
+```{r, echo=FALSE, fig.width=12, fig.height=12, fig.cap="\\label{power_cost_C} Zodiac plot representing power (at 5\\% significance level) versus the total cost of data generation. The gene expression levels are generated from NB$(\\rho L_j, \\phi)$. This particular plot is for a gene with relative abundace of $\\rho=10^{-5}$ (high level of expression) in one of the groups. The reference strategy (denoted by a diamond shape) contains $n=120$ biological samples (without pooling) with a mean library size of $20\\times 10^6$ per sample. Each panel represents a different LFC ($\\theta$) between the two groups and over-dispersion parameter $\\phi$ (reflecting biological variability). The relative cost is determined as the total cost of each strategy divided by the total cost of the reference design."} 
+lfc  <- list(S=0.5, L=1.0) 
+rho1 <- 10^-5
+n1   <- 60
+phi  <- list(S=0.5, L=2)
+LS.frac <- c(0.5e6, 1e6, 5e6, 10e6)
+alpha<- 0.05
+Q <- c(2,3,4, 6)
+
+# small LFC, small phi
+pwr_lfcS_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcS_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcS_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$S)
+pwr_lfcS_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+
+# small LFC, large phi
+pwr_lfcS_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcS_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcS_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcS_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+
+
+# large LFC, small phi
+pwr_lfcL_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcL_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcL_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$S) 
+pwr_lfcL_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+
+
+
+# large LFC, large phi
+pwr_lfcL_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcL_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcL_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcL_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+
+
+#png(filename = "manuscript/V1/power_cost_design_B.png", width = 25, height = 30, res = 400, units = "cm")
+par(mfrow=c(2,2),  oma=c(2, 2, 2, 0), mar=c(3,3,3,0.1), col="gray", cex.main=1.5)
+ref.cost <- pwr_lfcS_phiS_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==0.5~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray85", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiS_pool$total.cost/ref.cost, pwr_lfcS_phiS_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcS_phiS_subL$total.cost/ref.cost, pwr_lfcS_phiS_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcS_phiS_pool$total.cost/ref.cost,  pwr_lfcS_phiS_pool$power, labels = paste0("q=", Q),
+     pos=1, cex=1.0, col=4)
+text(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcS_phiS_subL$total.cost/ref.cost,  pwr_lfcS_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=3, cex=1.0, col=1)
+legend(0.7,0.4, "reference", pch=18, col=1, pt.cex=2, text.col=1, cex=1.5, bty="o")
+legend(0.7,0.3, c("strategy A", "strategy B", "strategy C"), pch=1, lty=1, 
+       col=c(4, 2, "gray"), pt.cex=2, text.col=1, cex=1.5, bty="o", lwd=3)
+
+
+ref.cost <- pwr_lfcS_phiL_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==0.5~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiL_pool$total.cost/ref.cost, pwr_lfcS_phiL_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcS_phiL_subL$total.cost/ref.cost, pwr_lfcS_phiL_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcS_phiL_pool$total.cost/ref.cost,  pwr_lfcS_phiL_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcS_phiL_subL$total.cost/ref.cost,  pwr_lfcS_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=3, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiS_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==1~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiS_pool$total.cost/ref.cost, pwr_lfcL_phiS_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcL_phiS_subL$total.cost/ref.cost, pwr_lfcL_phiS_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcL_phiS_pool$total.cost/ref.cost,  pwr_lfcL_phiS_pool$power, labels = paste0("q=", Q),
+     pos=3, cex=1.0, col=4)
+text(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=1, cex=1.0, col=2)
+text(pwr_lfcL_phiS_subL$total.cost/ref.cost,  pwr_lfcL_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=1, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiL_ref$total.cost
+plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+     ylab = "",  main=bquote(theta==1~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiL_pool$total.cost/ref.cost, pwr_lfcL_phiL_pool$power, 
+       type="b", lwd=3, col=4) 
+lines(pwr_lfcL_phiL_subL$total.cost/ref.cost, pwr_lfcL_phiL_subL$power, 
+       type="b", lwd=3, col="gray") 
+lines(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, 
+      type = "b", col=2, lwd=3)
+text(pwr_lfcL_phiL_pool$total.cost/ref.cost,  pwr_lfcL_phiL_pool$power, labels = paste0("q=", Q),
+     pos=1, cex=1.0, col=4)
+text(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+     pos=4, cex=1.0, col=2)
+text(pwr_lfcL_phiL_subL$total.cost/ref.cost,  pwr_lfcL_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=3, cex=1.0, col=1)
+
+title(xlab = "relative cost", ylab = "power", outer = TRUE, line=1, cex.lab=2)
+box("outer", col="gray")
+#dev.off()
+```
+
+
+```{r, eval=FALSE, echo=FALSE, fig.width=12, fig.height=7}
+lfc  <- list(S=0.5, L=1.0) 
+rho1 <- 10^-7
+n1   <- 60
+phi  <- list(S=0.5, L=2)
+LS.frac <- c(0.5e6, 1e6, 5e6, 10e6)
+alpha<- 0.05
+Q <- c(2,3,4, 6)
+
+# small LFC, small phi
+pwr_lfcS_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcS_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcS_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$S)
+pwr_lfcS_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+pwr_lfcS_phiS_poolSubL1 <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$S, mean.L = 10e6) 
+
+# small LFC, large phi
+pwr_lfcS_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcS_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcS_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcS_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+pwr_lfcS_phiL_poolSubL1 <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$S), 
+                                       n1 = n1, q = Q, phi=phi$L, mean.L = 10e6) 
+
+# large LFC, small phi
+pwr_lfcL_phiS_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S)
+pwr_lfcL_phiS_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$S)
+pwr_lfcL_phiS_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$S) 
+pwr_lfcL_phiS_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$S, mean.L = LS.frac) 
+pwr_lfcL_phiS_poolSubL1 <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$S, mean.L = 10e6) 
+
+
+# large LFC, large phi
+pwr_lfcL_phiL_ref <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L)
+pwr_lfcL_phiL_pool <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$L)
+pwr_lfcL_phiL_subn <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1/Q, q = 1, phi=phi$L)
+pwr_lfcL_phiL_subL <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = 1, phi=phi$L, mean.L = LS.frac) 
+pwr_lfcL_phiL_poolSubL1 <- calcPower_and_Cost(alpha = alpha, rho1 = rho1, exp.theta = exp(lfc$L), 
+                                       n1 = n1, q = Q, phi=phi$L, mean.L = 10e6) 
+
+
+png(filename = "manuscript/V1/power_cost_design.png", width = 30, height = 18, res = 400, units = "cm")
+par(oma=c(2, 2.5, 0, 0), mar=c(2,2,2,0.1), mfrow=c(1,2), col="gray", cex.main=1.5)
+ref.cost <- pwr_lfcS_phiS_ref$total.cost
+plot(seq(0, 1, 0.2), seq(0, 1, 0.2), type = "n", las=1, cex.lab=1.5, xlab="", ylim=c(0, 1),
+     ylab = "",  main=bquote(theta==0.5~" "~phi==0.5))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray85", lty=3, lwd=0.75)
+points(1, pwr_lfcS_phiS_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcS_phiS_pool$total.cost/ref.cost, pwr_lfcS_phiS_pool$power, 
+      type="o", pch=20, lwd=3, col=4) 
+lines(pwr_lfcS_phiS_subL$total.cost/ref.cost, pwr_lfcS_phiS_subL$power, 
+      type="o", pch=20, lwd=3, col=1) 
+lines(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, 
+     type="o", pch=20, col=2, lwd=3)
+# lines(pwr_lfcS_phiS_poolSubL1$total.cost/ref.cost,  pwr_lfcS_phiS_poolSubL1$power, 
+#      type="o", pch=20, col=3, lwd=3)
+text(pwr_lfcS_phiS_pool$total.cost/ref.cost,  pwr_lfcS_phiS_pool$power, labels = paste0("q=", Q),
+     pos=1, cex=1.0, col=4)
+text(pwr_lfcS_phiS_subn$total.cost/ref.cost,  pwr_lfcS_phiS_subn$power, labels = paste0("n=", n1/Q*2),
+     pos=2, cex=1.0, col=2)
+text(pwr_lfcS_phiS_subL$total.cost/ref.cost,  pwr_lfcS_phiS_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+# text(pwr_lfcS_phiS_poolSubL1$total.cost/ref.cost,  pwr_lfcS_phiS_poolSubL1$power, labels = paste0("q=", Q),
+#      pos=1, cex=1.0, col=3)
+legend(0,1, "reference", pch=18, col=1, pt.cex=2, text.col=1, cex=1.25, bty="o")
+legend(0.0,0.9, c("strategy A", "strategy B", "strategy C"), pch=20, lty=1, 
+       col=c(4, 2, 1), pt.cex=2, text.col=1, cex=1.25, bty="o", lwd=3)
+
+# ref.cost <- pwr_lfcS_phiL_ref$total.cost
+# plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+#      ylab = "",  main=bquote(theta==0.5~" "~phi==2))
+# abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+# points(1, pwr_lfcS_phiL_ref$power, pch=18, cex=2.5, col=1)
+# lines(pwr_lfcS_phiL_pool$total.cost/ref.cost, pwr_lfcS_phiL_pool$power, 
+#       type="o", pch=20, lwd=3, col=4) 
+# lines(pwr_lfcS_phiL_subL$total.cost/ref.cost, pwr_lfcS_phiL_subL$power, 
+#       type="o", pch=20, lwd=3, col="gray") 
+# lines(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, 
+#      type="o", pch=20, col=2, lwd=3)
+# text(pwr_lfcS_phiL_pool$total.cost/ref.cost,  pwr_lfcS_phiL_pool$power, labels = paste0("q=", Q),
+#      pos=3, cex=1.0, col=4)
+# text(pwr_lfcS_phiL_subn$total.cost/ref.cost,  pwr_lfcS_phiL_subn$power, labels = paste0("n_s=", n1/Q*2),
+#      pos=4, cex=1.0, col=2)
+# text(pwr_lfcS_phiL_subL$total.cost/ref.cost,  pwr_lfcS_phiL_subL$power, 
+#      labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+
+
+# ref.cost <- pwr_lfcL_phiS_ref$total.cost
+# plot(0:1, 0:1, type = "n", las=1, cex.lab=1.5, xlab="", 
+#      ylab = "",  main=bquote(theta==1~" "~phi==0.5))
+# abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray90", lty=3, lwd=0.75)
+# points(1, pwr_lfcL_phiS_ref$power, pch=18, cex=2.5, col=1)
+# lines(pwr_lfcL_phiS_pool$total.cost/ref.cost, pwr_lfcL_phiS_pool$power, 
+#       type="o", pch=20, lwd=3, col=4) 
+# lines(pwr_lfcL_phiS_subL$total.cost/ref.cost, pwr_lfcL_phiS_subL$power, 
+#       type="o", pch=20, lwd=3, col="gray") 
+# lines(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, 
+#      type="o", pch=20, col=2, lwd=3)
+# text(pwr_lfcL_phiS_pool$total.cost/ref.cost,  pwr_lfcL_phiS_pool$power, labels = paste0("q=", Q),
+#      pos=3, cex=1.0, col=4)
+# text(pwr_lfcL_phiS_subn$total.cost/ref.cost,  pwr_lfcL_phiS_subn$power, labels = paste0("n_s=", n1/Q*2),
+#      pos=4, cex=1.0, col=2)
+# text(pwr_lfcL_phiS_subL$total.cost/ref.cost,  pwr_lfcL_phiS_subL$power, 
+#      labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+
+
+ref.cost <- pwr_lfcL_phiL_ref$total.cost
+plot(seq(0, 1, 0.2), seq(0, 1, 0.2), type = "n", las=1, cex.lab=1.5, xlab="", ylim=c(0, 1),
+     ylab = "",  main=bquote(theta==1~" "~phi==2))
+abline(v=seq(0,1, 0.2), h=seq(0,1, 0.2), col="gray85", lty=3, lwd=0.75)
+points(1, pwr_lfcL_phiL_ref$power, pch=18, cex=2.5, col=1)
+lines(pwr_lfcL_phiL_pool$total.cost/ref.cost, pwr_lfcL_phiL_pool$power, 
+      type="o", pch=20, lwd=3, col=4) 
+lines(pwr_lfcL_phiL_subL$total.cost/ref.cost, pwr_lfcL_phiL_subL$power, 
+      type="o", pch=20, lwd=3, col=1) 
+lines(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, 
+      type="o", pch=20, col=2, lwd=3)
+# lines(pwr_lfcL_phiL_poolSubL1$total.cost/ref.cost,  pwr_lfcL_phiL_poolSubL1$power, 
+#      type="o", pch=20, col=3, lwd=3)
+text(pwr_lfcL_phiL_pool$total.cost/ref.cost,  pwr_lfcL_phiL_pool$power, labels = paste0("q=", Q),
+     pos=1, cex=1.0, col=4)
+text(pwr_lfcL_phiL_subn$total.cost/ref.cost,  pwr_lfcL_phiL_subn$power, labels = paste0("n=", n1/Q*2),
+     pos=2, cex=1.0, col=2)
+text(pwr_lfcL_phiL_subL$total.cost/ref.cost,  pwr_lfcL_phiL_subL$power, 
+     labels = paste0("L=", c(0.5,1, 5, 10), "M"), pos=4, cex=1.0, col=1)
+# text(pwr_lfcL_phiL_poolSubL1$total.cost/ref.cost,  pwr_lfcL_phiL_poolSubL1$power, labels = paste0("q=", Q),
+#      pos=1, cex=1.0, col=3)
+
+title(xlab = "relative cost", ylab = "power", outer = TRUE, line=1, cex.lab=2)
+box("outer", col="gray")
+dev.off()
+```
+
+
+\newpage
+# Supplementary results 2: sample pooling results using the Zhang data
+
+```{r, "Load datsets", echo=FALSE}
+# Load datsets
+## Uneual library sizes 
+dataREF   <- readRDS("V6/empirical results/Zahng/unequal LS/data_REF.rds")
+dataA   <- readRDS("V6/empirical results/Zahng/unequal LS/data_A.rds")
+dataB   <- readRDS("V6/empirical results/Zahng/unequal LS/data_B.rds")
+dataC   <- readRDS("V6/empirical results/Zahng/unequal LS/data_C.rds")
+dataC2   <- readRDS("V6/empirical results/Zahng/unequal LS/data_C2.rds")
+ 
+
+dataD   <- readRDS("V6/empirical results/Zahng/unequal LS/data_D.rds")
+dataE   <- readRDS("V6/empirical results/Zahng/unequal LS/data_E.rds")
+dataG   <- readRDS("V6/empirical results/Zahng/unequal LS/data_G.rds")
+dataF   <- readRDS("V6/empirical results/Zahng/unequal LS/data_F.rds") 
+
+dataH2   <- readRDS("V6/empirical results/Zahng/unequal LS/data_H2.rds")
+dataH3   <- readRDS("V6/empirical results/Zahng/unequal LS/data_H3.rds")
+dataI3   <- readRDS("V6/empirical results/Zahng/unequal LS/data_I3.rds")
+dataI4   <- readRDS("V6/empirical results/Zahng/unequal LS/data_I4.rds")
+
+all.scenario.data_unequalLS <- list(dataREF=dataREF,  
+                          dataA=dataA, dataB=dataB, dataC=dataC, dataC2=dataC2,   
+                          dataD=dataD, dataG=dataG, dataE=dataE, dataF=dataF, 
+                          dataH2=dataH2, dataI3=dataI3, dataH3=dataH3,  dataI4=dataI4)
+rm(list=names(all.scenario.data_unequalLS))
+
+data.summary1_unequalLS <- as.data.frame(t(sapply(all.scenario.data_unequalLS, function(dat){
+  tot.counts     <- round(sum(dat$counts)/1e6, 2)
+  n.replicates   <- ncol(dat$counts)/2
+  min.l.size     <- round(min(colSums(dat$counts))/1e6, 2)
+  med.l.size     <- round(median(colSums(dat$counts))/1e6, 2)
+  max.l.size     <- round(max(colSums(dat$counts))/1e6, 2)
+  n.genes        <- sum(rowMeans(dat$counts>0)>=0.1) 
+     
+  c(scenario = 0, tot.counts=tot.counts, n.replicates=n.replicates, min.LS=min.l.size, 
+    median.LS=med.l.size, max.LS=max.l.size, n.genes=n.genes)
+})))
+scenario.old.names <- substr(rownames(data.summary1_unequalLS), 5,7)
+data.summary1_unequalLS$q <- rep(c(1,2,  4), c(5, 4,4))
+data.summary1_unequalLS$scenario_old <- scenario.old.names
+data.summary1_unequalLS$cost <- data.summary1_unequalLS$tot.counts*7.5 + 
+  data.summary1_unequalLS$n.replicates*100+
+  (data.summary1_unequalLS$q*data.summary1_unequalLS$n.replicates*2)*20  
+
+scenario.names <- c("A0", paste0("A", 1:4), paste0("B", 1:4), paste0("C", 1:4))
+data.summary1_unequalLS$scenario <- scenario.names
+cols <-  rep(c(1,2, 4), c(5, 4,4)) 
+```
+ 
+
+```{r, fig.width=12, fig.height=5, echo=FALSE, fig.cap="\\label{summar1_A} Sample level summaries. A) the number of genes with non-zero expressions in at least 3 libraries versus  sequencing depth per library (symbol size);  B) total cost (symbol size) versus number of libraries for each scenario.", fig.pos="H"} 
+par(mfrow=c(1, 2)) 
+def_cex <- round(data.summary1_unequalLS$median.LS/min(data.summary1_unequalLS$median.LS), 1)*1
+plot(1:nrow(data.summary1_unequalLS), round(data.summary1_unequalLS$n.genes/1000), col=cols,
+     pch=18, cex=def_cex, xlab="scenario", ylab="number of genes/1000", xaxt="n",
+     ylim=c(26, 30), main="A")
+axis(1, at=1:nrow(data.summary1_unequalLS), labels = data.summary1_unequalLS$scenario)
+legend("bottomright", c("size ~ depth/smmple"), pch=NULL, cex=1.5)
+box("outer", col="gray")
+legend("topright", c("1","2", "4"), pt.cex=2, pch=20, col=c(1, 2,  4), 
+       title = "pool size", horiz = TRUE)
+
+def_cex <- round(data.summary1_unequalLS$cost/min(data.summary1_unequalLS$cost), 1)*1
+plot(1:nrow(data.summary1_unequalLS), data.summary1_unequalLS$n.replicates, col=cols,
+     pch=18, cex=def_cex, xlab="scenario", ylab="number of libraries per group", xaxt="n",
+     ylim=c(0, 50), main="B")
+axis(1, at=1:nrow(data.summary1_unequalLS), labels = data.summary1_unequalLS$scenario)
+legend("topright", c("size ~ cost"), pch=NULL, cex=1.5)
+box("outer", col="gray") 
+```
+
+```{r, fig.width=12, fig.height=8, fig.cap="\\label{summar2_A} Sample level summaries of the observed data in each scenario in terms of (1) the distribution of the pairwise correlation coefficients between samples within a condition (MYCN status), and (2) the distribution of the fraction of zero counts observed in each sample. These summaries are also plotted as a function of the median library size and pool size in each scenario.", echo=FALSE}
+
+# within group correlation between samples
+cor.mat <- sapply(all.scenario.data_unequalLS, function(dat){
+  cnt <- dat$counts[, dat$group==0]
+  cnt <- cnt[rowMeans(cnt)>=quantile(rowMeans(cnt), 0.5), ]
+  r.mat <- cor(cnt, method="pearson")
+  diag(r.mat) <- NA
+  as.vector(r.mat[!is.na(r.mat)])
+})
+names(cor.mat) <- scenario.names 
+
+zero.mat <- lapply(all.scenario.data_unequalLS, function(dat){
+  cnt <- dat$counts 
+  apply(cnt, 2, function(y) mean(y==0))
+})
+names(zero.mat) <- scenario.names 
+
+
+par(oma=c(0, 0, 0, 0))
+layout(matrix(c(1,2,1,3,4,5,4,6), 2, 4), heights = c(0.6, 0.4))
+boxplot(cor.mat, pch=20, border=cols, las=1, ylab="correlation",
+        xlab="", main="Distribution of correlations between samples")
+legend("bottomright", c("1","2",  "4"), pt.cex=2, pch=20, col=c(1,2,  4), 
+       title = "pool size")
+plot(data.summary1_unequalLS$median.LS, sapply(cor.mat, median), col=cols, pch=19, cex=2,
+     xlab="median library size", ylab="median correlation", las=1)
+plot(data.summary1_unequalLS$q, sapply(cor.mat, median), col=cols, pch=19, cex=2,
+     xlab="pool size (q)", ylab="median correlation", las=1)
+
+boxplot(zero.mat, pch=20, border=cols, las=1, ylab="fraction",
+        xlab="", main="Distribution of fraction of zero counts per samples")
+plot(data.summary1_unequalLS$median.LS, sapply(zero.mat, median), col=cols, pch=19, cex=2,
+     xlab="median library size", ylab="median fraction of zeroes", las=1)
+plot(data.summary1_unequalLS$q, sapply(zero.mat, median), col=cols, pch=19, cex=2,
+     xlab="pool size (q)", ylab="median fraction of zeroes", las=1)
+
+
+#title(main="", outer = TRUE, col.main=3)
+box("outer", col="gray") 
+```
+
+```{r, eval=FALSE, echo=FALSE} 
+data.summary2_unequalLS <- lapply(all.scenario.data_unequalLS, function(dat){
+  counts       <- dat$counts[rowSums(dat$counts>0)>=3, ]
+  log2CPM      <- log2(edgeR::cpm(counts)+1)
+  mean.log2CPM <- rowMeans(log2CPM)
+  var.log2CPM  <- rowVars(log2CPM)
+  cv.log2CPM   <- apply(log2CPM, 1, function(y) sd(y)/mean(y))
+  
+  LFC <- as.data.frame(t(apply(log2CPM, 1, function(x){
+    lfc    <- diff(tapply(x, dat$group, mean))
+    lfc.se <- sqrt(sum(tapply(x, dat$group, function(y){
+      var(y)/length(y)
+    })))
+    c(lfc, lfc.se)
+  })))
+  colnames(LFC) <- c("lfc", "lfc.se") 
+  
+  df <- data.frame(mean.norm=mean.log2CPM, var.norm=var.log2CPM,
+             BCV = cv.log2CPM, logFC=LFC$lfc, wald.stat=LFC$lfc/LFC$lfc.se, 
+             genes=as.character(rownames(LFC)), row.names = rownames(LFC))
+  df 
+})
+saveRDS(data.summary2_unequalLS, "V6/empirical results/Zahng/unequal LS/data.summary2_unequalLS.rds")
+
+```
+
+
+```{r, eval=TRUE, results="hide", fig.width=10, fig.height=8, echo=FALSE, fig.cap="", fig.pos="H"}
+data.summary2_unequalLS <- readRDS("V6/empirical results/Zahng/unequal LS/data.summary2_unequalLS.rds")  
+data.summary2_unequalLS <- data.summary2_unequalLS[rownames(data.summary1_unequalLS)] 
+  
+common.genes <- table(do.call("c", lapply(data.summary2_unequalLS, function(dat){
+  as.character(dat$genes)
+})))
+common.genes <- names(common.genes)[which(common.genes==13)]
+ 
+# par(mfrow=c(2, 3), oma=c(0,0,2, 0))
+mean.expr <- sapply(data.summary2_unequalLS, function(s){
+  v <- log2(s$mean.norm+1)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(mean.expr) <- scenario.names
+# boxplot(mean.expr, ylab="log2-mean",  main = "average gene expression",
+#          pch=20, border=cols, cex=0.25, xaxt="n")
+# axis(1, at=1:13, labels = FALSE)
+# text(1:13, par("usr")[3]-0.1 , labels = colnames(mean.expr), 
+#      srt = 45, pos = 1, xpd = TRUE)
+# points(1:13, colMeans(mean.expr, na.rm = TRUE), pch=20, cex=1.5, col=3) 
+
+
+var.expr <- sapply(data.summary2_unequalLS, function(s){
+  v <- log2((s$var.norm)+1)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(var.expr) <- scenario.names
+# boxplot(var.expr, ylab="log2-var",  main = "variance of gene expression",
+#          pch=20, border=cols, cex=0.25, xaxt="n")
+# axis(1, at=1:13, labels = FALSE)
+# text(1:13, par("usr")[3]-0.1 , labels = colnames(var.expr), 
+#      srt = 45, pos = 1, xpd = TRUE)
+ 
+
+bcv.expr <- sapply(data.summary2_unequalLS, function(s){
+  v <- sqrt(s$BCV)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(bcv.expr) <- scenario.names
+# boxplot(bcv.expr, ylab="CV", main = "Coefficients of Variations", 
+#         border=cols, pch=20, cex=0.25, xaxt="n")
+# axis(1, at=1:13, labels = FALSE)
+# text(1:13, par("usr")[3]-0.1 , labels = colnames(bcv.expr), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+
+
+logFC <- sapply(data.summary2_unequalLS, function(s){
+  v <- abs(s$logFC)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(logFC) <- scenario.names
+# boxplot(logFC, ylab="|lfc|", main = "log-fold-change", 
+#         border=cols, pch=20, cex=0.25, ylim=c(0, 6), xaxt="n")
+# axis(1, at=1:13, labels = FALSE)
+# text(1:13, par("usr")[3]-0.1 , labels = colnames(logFC), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+
+
+SNR <- sapply(data.summary2_unequalLS, function(s){
+  v <- abs(s$wald.stat)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(SNR) <- scenario.names
+# boxplot(SNR, ylab="|lfc/SE|", main = "standardized log-fold-change", 
+#         border=cols, pch=20, cex=0.25, ylim=c(0, 10), xaxt="n")
+# axis(1, at=1:13, labels = FALSE)
+# text(1:13, par("usr")[3]-0.1 , labels = colnames(SNR), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+ 
+
+# corLFC.withA0 <- sapply(colnames(logFC)[-1],  function(i){
+#   cor(logFC[,1], logFC[, i], use = "complete.obs") 
+# })
+# cols2 <- cols[-1]
+# plot(1:12, sort(corLFC.withA0), pch=16, cex=2, ylim = c(0.8, 1), xaxt="n", 
+#      xlab="", ylab = "correlation coefficint", main = "Correlation between the LFC estimates",
+#      col = cols2[order(corLFC.withA0)])
+# segments(x0=1:12, y0=0, y1=sort(corLFC.withA0), col = cols2[order(corLFC.withA0)])
+# axis(1, at=1:12, labels = FALSE)
+# text(1:12, par("usr")[3]-0.005 , labels = names(sort(corLFC.withA0)), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+biasLFC.withA0 <- sapply(colnames(logFC[,-1]),  function(i){ 
+  MAD <- mean(abs(logFC[,1]-logFC[, i])) 
+})
+cols2 <- cols[-1]
+# plot(1:12, sort(biasLFC.withA0), pch=16, cex=2, ylim = c(0, 0.2), xaxt="n", 
+#      xlab="", ylab = "MAD", main = "LFC bias: mean absolute difference (MAD)",
+#      col = cols2[order(biasLFC.withA0)])
+# segments(x0=1:12, y0=0, y1=sort(biasLFC.withA0), col = cols2[order(biasLFC.withA0)])
+# axis(1, at=1:12, labels = FALSE)
+# text(1:12, par("usr")[3]-0.005 , labels = names(sort(biasLFC.withA0)), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+
+#title(main="Unequal library size", outer = TRUE, col.main=3)
+#box("outer", col="gray")
+```
+
+```{r, echo=FALSE, eval=FALSE, "results for the manuscrip", fig.width=12, fig.height=5}
+# Figure in the manuscript
+
+mean.expr2 <- reshape2::melt(mean.expr)
+var.expr2  <- reshape2::melt(var.expr) 
+
+df <- as.data.frame(rbind(mean.expr2, var.expr2))
+df$statistic <- rep(c("A", "B"), c(nrow(mean.expr2), nrow(var.expr2)))
+df$q <- ifelse(substr(df$Var2,1,1)=="A", 1, ifelse(substr(df$Var2,1,1)=="B", 2, 4))
+df$q <- as.factor(df$q)
+p1 <- ggplot(df[df$statistic=="A", ], aes(y=value, x=Var2, colour=q))+
+  stat_boxplot(notch=TRUE, coef = 1.5, size = 0.75, notchwidth = 0.2)+
+  #facet_wrap(~statistic, scales = "free_y")+
+  theme_bw()+ 
+  scale_color_manual(values = c(1,2,4))+
+  theme(legend.position = "none",
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="log2-mean expression", x=NULL, title = "A") 
+p2 <- ggplot(df[df$statistic=="B", ], aes(y=value, x=Var2, colour=q))+
+  stat_boxplot(notch=TRUE, coef = 5, size = 0.75, notchwidth = 0.2,
+               outlier.colour="gray")+
+  #facet_wrap(~statistic, scales = "free_y")+
+  theme_bw()+ 
+  scale_color_manual(values = c(1,2,4))+
+  theme(legend.position = "mone",
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="log2-variance expression", x=NULL, title = "B") 
+
+biasLFC.withA02 <- as.data.frame(biasLFC.withA0)
+biasLFC.withA02$scenario <- rownames(biasLFC.withA02)
+biasLFC.withA02$q <- ifelse(substr(biasLFC.withA02$scenario,1,1)=="A", 1,
+                           ifelse(substr(biasLFC.withA02$scenario,1,1)=="B", 2, 4))
+biasLFC.withA02$q <- as.factor(biasLFC.withA02$q)
+
+p3 <- ggplot(biasLFC.withA02, aes(y=biasLFC.withA0, x=reorder(scenario, biasLFC.withA0), 
+                                  colour=q))+
+  geom_point(size=4)+
+  scale_color_manual(values = c(1,2,4), aesthetics = "colour")+   
+  geom_segment(aes(x=reorder(scenario, biasLFC.withA0), y = 0, 
+                   xend = reorder(scenario, biasLFC.withA0),
+                   yend = biasLFC.withA0, colour=q), data=biasLFC.withA02)+
+  theme_bw()+  
+  theme(legend.position = c(0.2, 0.8),
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="LFC bias: mean absolute deviation", x=NULL, title = "C") 
+png("manuscript/V1/reult1.png", width = 25, height = 10, units = "cm", res = 300)
+gridExtra::grid.arrange(grobs=list(p1,p2,p3), ncol=3, nrow=1)
+grid.rect(gp=gpar(fill=NA))
+dev.off()
+```
+
+
+```{r, echo=FALSE, fig.width=12, fig.height=6, fig.cap="\\label{summar3_A} Standardized log-fold-change (LFC) for MYCN pathway genes and the top 200 DE genes detected in the reference scenario A0 using limma-voom"}
+geneSet <- read.table("Dataset/MYCN157geneSet.txt", header = FALSE, sep="\t")
+#geneSet <- geneSet[order(geneSet$V2),]
+geneSet <- geneSet[complete.cases(geneSet),]
+pathway <- as.character(geneSet[,1])
+# pathway.ensID <- mapIds(hgu95av2.db, keys=pathway, keytype="SYMBOL", column="ENSEMBL")
+# pathway.ensID <- as.character(pathway.ensID)  
+pathway <- pathway[order(abs(geneSet$V2), decreasing = TRUE)]
+
+logFC.MYCN <- as.data.frame(logFC[rownames(logFC) %in% pathway, ])  
+logFC.MYCN <- logFC.MYCN[pathway,]
+logFC.MYCN <- logFC.MYCN[complete.cases(logFC.MYCN), ]
+
+pathway2 <- pathway[-c(1:60)]  
+SNR.MYCN <- as.data.frame(SNR[rownames(SNR) %in% pathway2, ])  
+SNR.MYCN <- SNR.MYCN[pathway2,] 
+SNR.MYCN <- SNR.MYCN[complete.cases(SNR.MYCN), ]
+
+ 
+#par(mfrow=c(1,2))
+# sumr.stat.MYCN <- apply(SNR.MYCN, 2, quantile, probs= 0.75) 
+# boxplot(SNR.MYCN[, order(sumr.stat.MYCN)], border = cols[order(sumr.stat.MYCN)])
+# abline(h=3) 
+SNR.MYCN2 <- reshape2::melt(SNR.MYCN)
+
+
+
+edgeR.DE.res_unequalLS <-readRDS("V6/empirical results/Zahng/unequal LS/edgeR.DE.res_unequalLS.rds")
+limma.DE.res_unequalLS <-readRDS("V6/empirical results/Zahng/unequal LS/limma.DE.res_unequalLS.rds")
+DE.A0.res.limma <- limma.DE.res_unequalLS[[1]]$DE.res
+DE.A0.res.limma <- DE.A0.res.limma[order(abs(DE.A0.res.limma$t),decreasing = TRUE),]
+topDEgenes.limma <-  DE.A0.res.limma$Genes[1:500]
+ 
+SNR.topDE <- as.data.frame(SNR[rownames(SNR) %in% topDEgenes.limma, ])  
+SNR.topDE <- SNR.topDE[topDEgenes.limma,] 
+SNR.topDE <- SNR.topDE[complete.cases(SNR.topDE), ]
+SNR.topDE2 <- reshape2::melt(SNR.topDE)
+ 
+#par(mfrow=c(1,2))
+# sumr.stat.topDE <- apply(SNR.topDE, 2, median) 
+# boxplot(SNR.topDE[, order(sumr.stat.topDE)], border = cols[order(sumr.stat.topDE)])
+# abline(h=3) 
+
+library(ggplot2)
+df <- as.data.frame(rbind(SNR.MYCN2, SNR.topDE2))
+df$geneset=rep(c("MYCN pathway", "top 200 DE genes"), c(nrow(SNR.MYCN2), nrow(SNR.topDE2)))
+df$q <- as.character(data.summary1_unequalLS$q[match(df$variable, data.summary1_unequalLS$scenario)])
+
+ggplot(df, aes(y=value, x=variable, colour=q))+
+  stat_boxplot(notch=TRUE, coef = 1.5, size=0.75)+
+  scale_color_manual(values = c(1,2,4), aesthetics = "colour")+   
+  facet_wrap(~geneset, scales = "free_y")+
+  theme_bw()+ 
+  theme(legend.position = "right",
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="standardized LFC", x=NULL, title = NULL) 
+```
+
+
+
+```{r, eval=FALSE, echo=FALSE}
+library(fgsea)
+#library(hgu95av2.db) 
+source("Global files/GSEA.R") 
+source("Global files/DE_Tools.R")  
+
+geneSet <- read.table("Dataset/MYCN157geneSet.txt", header = FALSE, sep="\t")
+geneSet <- geneSet[order(geneSet$V2),]
+pathway <- as.character(geneSet[,1])
+# pathway.ensID <- mapIds(hgu95av2.db, keys=pathway, keytype="SYMBOL", column="ENSEMBL")
+# pathway.ensID <- as.character(pathway.ensID) 
+pathway <- pathway[!is.na(pathway)]
+
+edgeR.DE.res_unequalLS <- lapply(all.scenario.data_unequalLS, function(dat){
+  res <- run_edgeR_glm(dat) 
+   
+  # GSEA
+  pval <- res$result$q
+  pval[pval<2e-16] <- 2e-16
+  stat <- qnorm(1-pval/2)*sign(res$result$logFC)
+  names(stat) <- res$result$Genes
+   
+  gsea.res <- suppressWarnings(GSEA(stat = stat, pathway = pathway))
+  gsea.res <- c(ES=gsea.res$ES, NES=gsea.res$NES, pval=gsea.res$pval)
+  
+  list(DE.res = res$result, gsea.res=gsea.res)
+})
+saveRDS(edgeR.DE.res_unequalLS, "V6/empirical results/Zahng/unequal LS/edgeR.DE.res_unequalLS.rds")
+
+limma.DE.res_unequalLS <- lapply(all.scenario.data_unequalLS, function(dat){
+  res <- run_limmaVoom(dat) 
+   
+  # GSEA
+  pval <- res$result$q
+  pval[pval<2e-16] <- 2e-16
+  stat <- qnorm(1-pval/2)*sign(res$result$LFC)
+  names(stat) <- res$result$Genes
+   
+  gsea.res <- suppressWarnings(GSEA(stat = stat, pathway = pathway))
+  gsea.res <- c(ES=gsea.res$ES, NES=gsea.res$NES, pval=gsea.res$pval)
+  
+  list(DE.res = res$result, gsea.res=gsea.res)
+})
+saveRDS(limma.DE.res_unequalLS, "V6/empirical results/Zahng/unequal LS/limma.DE.res_unequalLS.rds") 
+```
+
+```{r, echo=FALSE, eval=TRUE, fig.width=12, fig.height=5, fig.cap="\\label{DGE_GSE_res} Differential gene expression results for pooling scenarios generated using the Zhang RNA-seq dataset. A) The number of DE genes detected at 5% FDR;  B) The fraction of overlap (concordance) defined as the fraction of DE genes detected in a test scenario that are also detected in the reference scenario.", fig.pos="h"}
+source("Global files/reorder_within.R")
+edgeR.DE.res_unequalLS <-readRDS("V6/empirical results/Zahng/unequal LS/edgeR.DE.res_unequalLS.rds")
+limma.DE.res_unequalLS <-readRDS("V6/empirical results/Zahng/unequal LS/limma.DE.res_unequalLS.rds")
+ 
+edgeR.DE.res_unequalLS <- edgeR.DE.res_unequalLS[rownames(data.summary1_unequalLS)]
+limma.DE.res_unequalLS <- limma.DE.res_unequalLS[rownames(data.summary1_unequalLS)]
+  
+
+dlt=1
+edgeR.nDE.genes_unequalLS_dlt1 <- t(sapply(edgeR.DE.res_unequalLS, function(x){
+  sum(x$DE.res$q<0.05 & abs(x$DE.res$logFC)>=dlt)
+}))
+limma.nDE.genes_unequalLS_dlt1 <- t(sapply(limma.DE.res_unequalLS, function(x){
+  sum(x$DE.res$q<0.05 & abs(x$DE.res$LFC)>=dlt)
+})) 
+nDE.genes_unequalLS_dlt1 <- data.frame(nDE=c(edgeR.nDE.genes_unequalLS_dlt1,
+                                             limma.nDE.genes_unequalLS_dlt1),
+                        tool = rep(c("edgeR", "limma"), each=nrow(data.summary1_unequalLS)),
+                        scenario=data.summary1_unequalLS$scenario,
+                        `pool size` = as.factor(data.summary1_unequalLS$q),
+                        tot.counts=data.summary1_unequalLS$tot.counts,
+                        n.replicates=data.summary1_unequalLS$n.replicates,
+                        depth=data.summary1_unequalLS$median.LS,
+                        LFC=dlt)
+ 
+
+nDE.genes_unequalLS <- nDE.genes_unequalLS_dlt1
+
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(gridExtra))
+
+p1.DGE <- ggplot(nDE.genes_unequalLS, aes(x=scenario, y=nDE, group=pool.size,  
+                                          colour=pool.size, fill=pool.size))+
+  geom_bar(stat = "identity", position = "dodge", size=0.75)+
+  theme_bw()+
+  scale_color_manual(values = c(1,2,4))+
+  scale_fill_manual(values = alpha(c(1,2,4), 0.2))+ 
+  facet_grid(~tool, scales = "free_y")+
+  theme(legend.position = c(0.75, 0.9), 
+        legend.direction = "horizontal",  
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="#DE genes (5% FDR)", x=NULL, title="A")
+
+
+
+# ----------- fraction of overlap DELTA = 1 --------------
+delt=1
+edgeR.DE.compare_unequalLS <- t(sapply(edgeR.DE.res_unequalLS, function(x){
+  res.pool <- x$DE.res
+  res.orgl <- edgeR.DE.res_unequalLS$dataREF$DE.res
+  res <- merge(res.pool, res.orgl, by="Genes")
+  fpp <- sum(res$q.x<0.05 & abs(res$logFC.x)>delt & res$q.y>=0.05, 
+             na.rm = TRUE)/sum(res$q.x<0.05 & abs(res$logFC.x)>delt, na.rm = TRUE)
+  tpp <- sum(res$q.x<0.05 & res$q.y<0.05 & abs(res$logFC.y)>delt, 
+             na.rm = TRUE)/sum(res$q.y<0.05 & abs(res$logFC.y)>delt, na.rm = TRUE)
+  c(fpp=fpp, tpp=tpp)
+}))
+limma.DE.compare_unequalLS <- t(sapply(limma.DE.res_unequalLS, function(x){
+  res.pool <- x$DE.res
+  res.orgl <- limma.DE.res_unequalLS$dataREF$DE.res
+  res <- merge(res.pool, res.orgl, by="Genes")
+  fpp <- sum(res$q.x<0.05 &  abs(res$LFC.x) >= delt &  res$q.y>=0.05, 
+             na.rm = TRUE)/sum(res$q.x<0.05 &  abs(res$LFC.x)>= delt, na.rm = TRUE)
+  tpp <- sum(res$q.x<0.05 & res$q.y<0.05 & abs(res$LFC.y)>delt, 
+             na.rm = TRUE)/sum(res$q.y<0.05 & abs(res$LFC.y)>delt, na.rm = TRUE)
+  c(fpp=fpp, tpp=tpp)
+})) 
+ 
+ 
+
+
+TPP.res_unequalLS <- data.frame(TPP=c(edgeR.DE.compare_unequalLS[, 2],
+                                      limma.DE.compare_unequalLS[,2]),
+                        tool = rep(c("edgeR", "limma"), each=nrow(data.summary1_unequalLS)),
+                        scenario=data.summary1_unequalLS$scenario,
+                        pool = factor(data.summary1_unequalLS$q),
+                        tot.counts=data.summary1_unequalLS$tot.counts,
+                        n.replicates=data.summary1_unequalLS$n.replicates,
+                        depth=data.summary1_unequalLS$median.LS) 
+TPP.res_unequalLS  <- TPP.res_unequalLS[TPP.res_unequalLS$scenario != "A0",]
+
+ 
+p2 <- ggplot(TPP.res_unequalLS, aes(x=scenario, y=TPP, group=pool, color=pool, fill=pool))+
+  geom_bar(stat = "identity", position = "dodge", size=0.75)+
+  theme_bw()+
+  facet_wrap(~tool)+
+  scale_color_manual(values = c(1,2,4))+
+  scale_fill_manual(values = alpha(c(1,2,4), 0.2))+ 
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="fraction of overlap with A0", x=NULL, title = "B")+
+  ylim(0, 1)
+  
+grid.arrange(grobs=list(p1.DGE, p2), nrow=1, ncol=2)
+grid.rect(gp=gpar(fill=NA))
+```
+
+ 
+ 
+```{r, echo=FALSE, eval=TRUE, fig.width=12, fig.height=6, results="hide", fig.cap="\\label{DGE_GSE_res2} The distribution of the mean and coefficients of variation of the normalied read counts of the set of DE genes unquely detected by limma in each scenario."}
+#library(UpSetR)
+#str(edgeR.DE.res_unequalLS)
+dlt <- 0
+DE.ind.edgeR <- as.data.frame(sapply(edgeR.DE.res_unequalLS, function(y){
+  x <- as.numeric(y$DE.res$q<0.01 & abs(y$DE.res$logFC)>dlt)
+  names(x) <- y$DE.res$Genes
+  x[common.genes]
+}))
+colnames(DE.ind.edgeR) <- data.summary1_unequalLS$scenario
+
+# png("manuscript/V1/reult3upset.png", width = 30, height = 20, units = "cm", res = 300)
+# UpSetR::upset(DE.ind.edgeR,  order.by = c("freq"), decreasing = c(TRUE), nsets = 13)
+# dev.off()
+
+
+DE.ind.limma <- as.data.frame(sapply(limma.DE.res_unequalLS, function(y){
+  x <- as.numeric(y$DE.res$q<0.01 & abs(y$DE.res$LFC)>dlt)
+  names(x) <- y$DE.res$Genes
+  x[common.genes] 
+}))
+colnames(DE.ind.limma) <- data.summary1_unequalLS$scenario
+
+# png("manuscript/V1/reult3upset.png", width = 30, height = 20, units = "cm", res = 300)
+# UpSetR::upset(DE.ind.limma,  order.by = c("freq"), decreasing = c(TRUE), nsets = 13)
+# dev.off()
+
+
+#unique set of genes edgeR
+# unique.DE.set.edgeR <- DE.ind.edgeR[rowSums(DE.ind.edgeR)==1,]
+# unique.DE.set.edgeR <- lapply(unique.DE.set.edgeR, function(x) rownames(unique.DE.set.edgeR)[which(x==1)])
+# mean.expr.unique.DE.set.edgeR <- lapply(unique.DE.set.edgeR, function(y) mean.expr[y,1])
+# var.expr.unique.DE.set.edgeR <- lapply(unique.DE.set.edgeR, function(y) bcv.expr[y,1])  
+# LFC.unique.DE.set.edgeR       <- lapply(unique.DE.set.edgeR,  function(y) logFC[y,1])
+# SNR.unique.DE.set.edgeR       <- lapply(unique.DE.set.edgeR, function(y) SNR[y,1]) 
+
+# par(mfrow=c(1,2))
+# boxplot(mean.expr.unique.DE.set.edgeR, border = cols)
+# boxplot(var.expr.unique.DE.set.edgeR, border = cols)
+# 
+# par(mfrow=c(1,2))
+# boxplot(LFC.unique.DE.set.edgeR, border = cols)
+# boxplot(SNR.unique.DE.set.edgeR, border = cols)
+
+
+
+#unique set of genes limma
+unique.DE.set.limma <- DE.ind.limma[rowSums(DE.ind.limma)==1,]
+unique.DE.set.limma <- lapply(unique.DE.set.limma, function(x) rownames(unique.DE.set.limma)[which(x==1)])
+mean.expr.unique.DE.set.limma <- lapply(unique.DE.set.limma, function(y) mean.expr[y,1])
+var.expr.unique.DE.set.limma  <- lapply(unique.DE.set.limma, function(y) bcv.expr[y,1]) 
+# LFC.unique.DE.set.limma       <- lapply(unique.DE.set.limma,  function(y) logFC[y,1])
+# SNR.unique.DE.set.limma       <- lapply(unique.DE.set.limma, function(y) SNR[y,1]) 
+
+# par(mfrow=c(1,2))
+# boxplot(mean.expr.unique.DE.set.limma, border = cols)
+# boxplot(var.expr.unique.DE.set.limma, border = cols)
+# 
+# par(mfrow=c(1,2))
+# boxplot(LFC.unique.DE.set.limma, border = cols)
+# boxplot(SNR.unique.DE.set.limma, border = cols)
+
+mean.expr.unique.DE.set.limma2 <- reshape2::melt(mean.expr.unique.DE.set.limma) 
+var.expr.unique.DE.set.limma2 <- reshape2::melt(var.expr.unique.DE.set.limma)
+
+stat.unque.DE.limma <- as.data.frame(rbind(mean.expr.unique.DE.set.limma2,
+                                           var.expr.unique.DE.set.limma2))
+stat.unque.DE.limma$stat <- rep(c("log2-mean expression", "coefficients of variation"), c(nrow(mean.expr.unique.DE.set.limma2), 
+                                                    nrow(var.expr.unique.DE.set.limma2)))
+stat.unque.DE.limma$q <- ifelse(substr(stat.unque.DE.limma$L1,1,1)=="A", 1, ifelse(substr(stat.unque.DE.limma$L1,1,1)=="B", 2, 4))
+stat.unque.DE.limma$q <- as.factor(stat.unque.DE.limma$q)
+
+ggplot(stat.unque.DE.limma, aes(y=value, x=L1, colour=q))+
+  stat_boxplot(notch=FALSE, coef = 1.5, size=0.75) +
+  facet_wrap(~stat, scales = "free_y")+
+  theme_bw()+ 
+  scale_colour_manual(values = c(1,2,4))+
+  theme(legend.position = "right",
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  labs(y="", x=NULL, title = NULL) 
+
+```
+ 
+```{r, echo=FALSE, eval=FALSE, "simulation results"}
+#rm(list = ls())
+scen <- c("A0", paste0("A", 1:4), paste0("B", 1:4), paste0("C", 1:4))
+q    <- c(rep(1, 5), rep(2, 4), rep(4, 4))
+
+# --------------  LFC >= 0.5 ----------------
+perf.edgeR <- readRDS("V6/simulation/sim_1/perf.edgeR.rds")
+perf.limma <- readRDS("V6/simulation/sim_1/perf.limma.rds") 
+
+library(reshape2)
+perf.edgeR.fpp <-  tapply(perf.edgeR$fpp, list(perf.edgeR$alpha, perf.edgeR$scenario), mean, na.rm=TRUE)
+perf.edgeR.fpp <-  melt(perf.edgeR.fpp)
+colnames(perf.edgeR.fpp) <- c("alpha", "scenario", "fpp")
+perf.edgeR.tpp <-  tapply(perf.edgeR$tpp, list(perf.edgeR$alpha, perf.edgeR$scenario), mean, na.rm=TRUE)
+perf.edgeR.tpp <-  melt(perf.edgeR.tpp)
+perf.edgeR2 <- perf.edgeR.fpp
+perf.edgeR2$tpp <- perf.edgeR.tpp$value
+perf.edgeR2$scenario <- scen[perf.edgeR2$scenario]
+perf.edgeR2$pool.size <- ifelse(substr(perf.edgeR2$scenario,1,1) =="A", 1,
+                                ifelse(substr(perf.edgeR2$scenario,1,1)=="B",2, 4))
+perf.edgeR2$tool <- "edgeR"
+
+perf.limma.fpp <-  tapply(perf.limma$fpp, list(perf.limma$alpha, perf.limma$scenario), mean, na.rm=TRUE)
+perf.limma.fpp <-  melt(perf.limma.fpp)
+colnames(perf.limma.fpp) <- c("alpha", "scenario", "fpp")
+perf.limma.tpp <-  tapply(perf.limma$tpp, list(perf.limma$alpha, perf.limma$scenario), mean, na.rm=TRUE)
+perf.limma.tpp <-  melt(perf.limma.tpp)
+perf.limma2 <- perf.limma.fpp
+perf.limma2$tpp <- perf.limma.tpp$value
+perf.limma2$scenario <- scen[perf.limma2$scenario]
+perf.limma2$pool.size <- ifelse(substr(perf.limma2$scenario,1,1) =="A", 1,
+                                ifelse(substr(perf.limma2$scenario,1,1)=="B",2, 4))
+perf.limma2$tool <- "limma-voom"
+
+
+perf.all <- rbind(perf.edgeR2, perf.limma2)
+perf.all$pool.size <- as.factor(perf.all$pool.size)
+tab1 <- perf.all[perf.all$alpha==0.05, ]
+
+library(ggplot2)
+cols <- c("black", "gray30", "gray50", "gray65", "gray80", "red4", "red2", "salmon3", "salmon",
+          "royalblue4", "royalblue1", "steelblue3", "lightskyblue")
+p1 <- ggplot(perf.all, aes(x=fpp, y=tpp, group=scenario, colour=scenario))+ 
+  geom_vline(xintercept=0.05, colour = "gray60", linetype = "dashed", size=0.75)+
+  #geom_abline(xintercept=0, slope = 1, colour = "gray", linetype = "dashed", size=0.5)+
+  geom_line(size=1.25)+ 
+  scale_y_continuous(breaks = seq(0, 1, 0.25))+ 
+  geom_point(aes(x=fpp, y=tpp, group=scenario, colour=scenario),
+             data=perf.all[perf.all$alpha==0.05, ], size=5)+
+  theme_bw()+
+  facet_wrap(~tool)+
+  scale_color_manual(values = cols)+
+  xlim(0, 0.4)+
+  theme(legend.position = c(0.8, 0.2),
+        strip.text = element_text(size=15)
+        #legend.direction = "horizontal",
+        #axis.text.x = element_text(angle = 45, hjust = 1)
+        )+  
+  labs(y="TPR", x="actual FDR", title="A")+
+  guides(colour=guide_legend(ncol=4))
+
+
+
+
+# --------------  LFC >= 1 ----------------
+perf.edgeR <- readRDS("V6/simulation/sim_2/perf.edgeR.rds")
+perf.limma <- readRDS("V6/simulation/sim_2/perf.limma.rds") 
+
+library(reshape2)
+perf.edgeR.fpp <-  tapply(perf.edgeR$fpp, list(perf.edgeR$alpha, perf.edgeR$scenario), mean, na.rm=TRUE)
+perf.edgeR.fpp <-  melt(perf.edgeR.fpp)
+colnames(perf.edgeR.fpp) <- c("alpha", "scenario", "fpp")
+perf.edgeR.tpp <-  tapply(perf.edgeR$tpp, list(perf.edgeR$alpha, perf.edgeR$scenario), mean, na.rm=TRUE)
+perf.edgeR.tpp <-  melt(perf.edgeR.tpp)
+perf.edgeR2 <- perf.edgeR.fpp
+perf.edgeR2$tpp <- perf.edgeR.tpp$value
+perf.edgeR2$scenario <- scen[perf.edgeR2$scenario]
+perf.edgeR2$pool.size <- ifelse(substr(perf.edgeR2$scenario,1,1) =="A", 1,
+                                ifelse(substr(perf.edgeR2$scenario,1,1)=="B",2, 4))
+perf.edgeR2$tool <- "edgeR"
+
+perf.limma.fpp <-  tapply(perf.limma$fpp, list(perf.limma$alpha, perf.limma$scenario), mean, na.rm=TRUE)
+perf.limma.fpp <-  melt(perf.limma.fpp)
+colnames(perf.limma.fpp) <- c("alpha", "scenario", "fpp")
+perf.limma.tpp <-  tapply(perf.limma$tpp, list(perf.limma$alpha, perf.limma$scenario), mean, na.rm=TRUE)
+perf.limma.tpp <-  melt(perf.limma.tpp)
+perf.limma2 <- perf.limma.fpp
+perf.limma2$tpp <- perf.limma.tpp$value
+perf.limma2$scenario <- scen[perf.limma2$scenario]
+perf.limma2$pool.size <- ifelse(substr(perf.limma2$scenario,1,1) =="A", 1,
+                                ifelse(substr(perf.limma2$scenario,1,1)=="B",2, 4))
+perf.limma2$tool <- "limma-voom"
+
+
+perf.all <- rbind(perf.edgeR2, perf.limma2)
+perf.all$pool.size <- as.factor(perf.all$pool.size)
+
+tab2 <- perf.all[perf.all$alpha==0.05, ]
+
+library(ggplot2)
+cols <- c("black", "gray30", "gray50", "gray65", "gray80", "red4", "red2", "salmon3", "salmon",
+          "royalblue4", "royalblue1", "steelblue3", "lightskyblue")
+p2 <- ggplot(perf.all, aes(x=fpp, y=tpp, group=scenario, colour=scenario))+ 
+  geom_vline(xintercept=0.05, colour = "gray60", linetype = "dashed", size=0.75)+
+  # geom_abline(xintercept=0, slope = 1, colour = "gray", 
+  #             linetype = "dashed", size=0.5)+
+  geom_line(size=1.25)+ 
+  geom_point(aes(x=fpp, y=tpp, group=scenario, colour=scenario),
+             data=perf.all[perf.all$alpha==0.05, ], size=5)+
+  theme_bw()+
+  facet_wrap(~tool)+
+  scale_color_manual(values = cols)+
+  xlim(0, 0.4)+
+  scale_y_continuous(breaks = seq(0, 1, 0.1))+ 
+  theme(legend.position = "none",
+        strip.text = element_text(size=15)
+        #legend.direction = "horizontal",
+        #axis.text.x = element_text(angle = 45, hjust = 1)
+        ) +  
+  labs(y="TPR", x="actual FDR", title="B")
+  
+  #guides(colour=guide_legend(ncol=4))
+
+library(grid)
+png("manuscript/V1/simulationResult.png", width = 22, height = 25, units = "cm", res = 500)
+gridExtra::grid.arrange(grobs=list(p1,p2), ncol=1, nrow=2)
+grid::grid.rect(gp=gpar(fill=NA))
+dev.off()
+
+tab1 ; tab2
+df <- data.frame(scenario=tab1$scenario, FDR.LFC0.5=tab1$fpp,  TPR.LFC0.5=tab1$tpp,
+                 FDR.LFC1=tab2$fpp, TPR.LFC1=tab2$tpp, tool=tab1$tool)
+df.edgeR <- df[df$tool =="edgeR", ]
+df.limma <- df[df$tool =="limma-voom", -c(1, 6)]
+colnames(df.limma) <- paste0(colnames(df.limma),"_limma")
+df <- cbind(df.edgeR, df.limma)
+
+library(xtable)
+print(xtable(df), include.rownames=FALSE)
+```
+
+
+```{r, echo=FALSE, eval=FALSE, "combining results"}
+# standardize <- function(x){(x-mean(x))/sd(x)}
+# colMedian   <- function(x){apply(x, 2, median)}
+# sumr.edgeR_unequalLS <- data.frame(scenario=data.summary1_unequalLS$scenario,
+#                          #inverse_cost=1/data.summary1_unequalLS$cost, 
+#                          #n.genes = data.summary1_unequalLS$n.genes,
+#                          inverse_BCV = 1/colMeans(var.expr),
+#                          stand.LFC = colMeans(SNR.topDE),
+#                          bias.LFC = 1-c(0, biasLFC.withA0),
+#                          concordance = edgeR.DE.compare_unequalLS[, "tpp"],
+#                          #nDE=c(edgeR.nDE.genes_unequalLS), 
+#                          #NES = c(edgeR.GSEA.res_unequalLS),
+#                          oneMinus_FDR=1-df.edgeR$FDR.LFC0.5,  
+#                          TPP=df.edgeR$TPR.LFC0.5)
+# sumr.edgeR_unequalLS[, -1] <- apply(sumr.edgeR_unequalLS[, -1], 2, standardize) 
+# 
+# sumr.limma_unequalLS <- data.frame(scenario=data.summary1_unequalLS$scenario,
+#                          #inverse_cost=1/data.summary1_unequalLS$cost, 
+#                          #n.genes = data.summary1_unequalLS$n.genes,
+#                          inverse_BCV = 1/colMeans(var.expr),
+#                          stand.LFC = colMeans(SNR.topDE),
+#                          bias.LFC = 1-c(0, biasLFC.withA0),
+#                          concordance = limma.DE.compare_unequalLS[, "tpp"],
+#                          #nDE=c(edgeR.nDE.genes_unequalLS), 
+#                          #NES = c(edgeR.GSEA.res_unequalLS),
+#                          oneMinus_FDR=1-df.limma$FDR.LFC0.5_limma,  
+#                          TPP=df.limma$TPR.LFC0.5_limma)
+# sumr.limma_unequalLS[, -1] <- apply(sumr.limma_unequalLS[, -1], 2, standardize)
+
+# saveRDS(sumr.edgeR_unequalLS, "manuscript/V1/sumr.edgeR_unequalLS.rds")
+# saveRDS(sumr.limma_unequalLS, "manuscript/V1/sumr.limma_unequalLS.rds")
+
+sumr.edgeR_unequalLS <- readRDS("manuscript/V1/sumr.edgeR_unequalLS.rds")
+sumr.limma_unequalLS <- readRDS("manuscript/V1/sumr.limma_unequalLS.rds")
+
+sumr.edgeR.avg.score_unequalLS <- rowMeans(sumr.edgeR_unequalLS[,-1])
+names(sumr.edgeR.avg.score_unequalLS) <- data.summary1_unequalLS$scenario
+
+sumr.limma.avg.score_unequalLS <- rowMeans(sumr.limma_unequalLS[,-1])
+names(sumr.limma.avg.score_unequalLS) <- data.summary1_unequalLS$scenario 
+
+
+PCA_edgeR <- princomp(sumr.edgeR_unequalLS[, -1])
+sumr.edgeR.PC1.score_unequalLS <- PCA_edgeR$scores[,1]
+names(sumr.edgeR.PC1.score_unequalLS) <- data.summary1_unequalLS$scenario
+
+PCA_limma <- princomp(sumr.limma_unequalLS[, -1])
+sumr.limma.PC1.score_unequalLS <- PCA_limma$scores[,1]
+names(sumr.limma.PC1.score_unequalLS) <- data.summary1_unequalLS$scenario
+
+
+
+cols2 <- cols[-1]
+
+par(mfrow=c(1, 2))
+barplot(sort(sumr.edgeR.avg.score_unequalLS[-1]), border=cols2[order(sumr.edgeR.avg.score_unequalLS[-1])],
+        col="white", lwd=2, main="edgeR", las=1, ylab=expression(Z[s]))
+barplot(sort(sumr.limma.avg.score_unequalLS[-1]), border=cols2[order(sumr.limma.avg.score_unequalLS[-1])],
+        col="white", lwd=2, main="limma", las=1, ylab=expression(Z[s]))
+#title(main="Unequal library size", outer = TRUE)
+box("outer") 
+
+df.score <- data.frame(score=c(sumr.edgeR.avg.score_unequalLS+sumr.limma.avg.score_unequalLS)/2,
+                       scenario=names(sumr.edgeR.avg.score_unequalLS),
+                       pool.size=as.factor(data.summary1_unequalLS$q),
+                       #tool=rep(c("edgeR", "limma-voom"), each=13),  
+                       total.cost = data.summary1_unequalLS$cost,
+                       sample.prep.cost=data.summary1_unequalLS$n.replicates*2*data.summary1_unequalLS$q*20,
+                       library.prep.cost=data.summary1_unequalLS$n.replicates*2*100,
+                       sequencing.cost=data.summary1_unequalLS$tot.counts*7.5)
+library(ggplot2)
+pp1 <- ggplot(df.score,  aes(x=reorder(scenario, score), y=score))+
+  geom_point(size=4, colour="deepskyblue3")+
+  geom_segment(aes(xend = reorder(scenario, score), yend = 0), size = 1, 
+               lineend = "butt", colour="deepskyblue3")+
+  theme_bw()+
+  #facet_wrap(~tool)+
+  coord_flip()+
+  #scale_color_manual(values = cols)+  
+  theme(legend.position = "none",
+        #legend.direction = "horizontal",
+        axis.text = element_text(size=12),
+        axis.title =  element_text(size=14),
+        plot.title = element_text(hjust = 0.5)
+        ) +  
+  labs(y=NULL, x=NULL, title="score")+
+  geom_hline(yintercept = 0, colour="gray", linetype="dashed", size=1)+
+  ylim(-1, 1)
+
+df.score.limma2 <- df.score #[df.score$tool=="limma-voom",]
+df.score.limma2$RTC <- df.score.limma2$total.cost/df.score.limma2$total.cost[1]
+df.score.limma2$RNA <- df.score.limma2$sample.prep.cost/df.score.limma2$sample.prep.cost[1]
+df.score.limma2$library <- df.score.limma2$library.prep.cost/df.score.limma2$library.prep.cost[1]
+df.score.limma2$sequencing <- df.score.limma2$sequencing.cost/df.score.limma2$sequencing.cost[1]
+df.score.limma2$pseudo_y <- rep(1, 13)
+
+saveRDS(df.score.limma2, "manuscript/V1/suppl_results/df.score.limma2.rds")
+
+df.score.limma2 <- readRDS("manuscript/V1/suppl_results/df.score.limma2.rds")
+
+pp2 <- ggplot(df.score.limma2)+
+  geom_point(aes(x=reorder(scenario, score), y=pseudo_y),
+             size=3*df.score.limma2$RNA, colour="deepskyblue3")+ 
+  geom_point(size=8*df.score.limma2$library,
+             aes(x=reorder(scenario, score), y=pseudo_y+1), colour="deepskyblue3")+ 
+  geom_point(size=12*df.score.limma2$sequencing, 
+             aes(x=reorder(scenario, score), y=pseudo_y+2), colour="deepskyblue3")+  
+  theme_bw()+ 
+  coord_flip()+
+  theme(legend.position = "none",
+        #legend.direction = "horizontal",
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size=12),
+        axis.title =  element_text(size=14),
+        plot.title = element_text(hjust = 0.5)
+        ) +  
+  scale_y_discrete(limits=c("RNA", "library", "sequencing"))+
+  labs(x=NULL, title="relative cost", y=NULL)
+
+
+library(grid)
+png("manuscript/V1/overallResultLimma.png", width = 13, height = 15, units = "cm", res = 500)
+gridExtra::grid.arrange(grobs=list(pp1,pp2), ncol=2, nrow=1)
+grid::grid.rect(gp=gpar(fill=NA))
+dev.off()
+
+
+```
+
+
+
+
+\newpage
+# Supplementary results 3: sample pooling results using the  NGP nutlin data
+ 
+```{r, echo=FALSE}
+all.scen.NGP <- list(A0=readRDS("V6/empirical results/NGP/NGP.datA0.rds"),
+                     A=readRDS("V6/empirical results/NGP/NGP.datA.rds"),
+                     B=readRDS("V6/empirical results/NGP/NGP.datB.rds"),
+                     C=readRDS("V6/empirical results/NGP/NGP.datC.rds"))
+
+data.summary1_NGP <- as.data.frame(t(sapply(all.scen.NGP, function(dat){
+  tot.counts     <- round(sum(dat$counts)/1e6, 2)
+  n.replicates   <- ncol(dat$counts)/2
+  min.l.size     <- round(min(colSums(dat$counts))/1e6, 2)
+  med.l.size     <- round(median(colSums(dat$counts))/1e6, 2)
+  max.l.size     <- round(max(colSums(dat$counts))/1e6, 2)
+  n.genes        <- sum(rowMeans(dat$counts>0)>=0.1) 
+  
+  c(scenario = 0, tot.counts=tot.counts, n.replicates=n.replicates, min.LS=min.l.size, 
+    median.LS=med.l.size, max.LS=max.l.size, n.genes=n.genes)
+}))) 
+data.summary1_NGP$q <- c(1,1, 2,3)
+data.summary1_NGP$scenario <- c("A0", LETTERS[1:3])
+data.summary1_NGP$cost <- data.summary1_NGP$tot.counts*7.5 + 
+  data.summary1_NGP$n.replicates*100+
+  (data.summary1_NGP$q*data.summary1_NGP$n.replicates*2)*20  
+
+
+scenario.names  <- data.summary1_NGP$scenario
+cols <- c(1,1:3)
+```
+
+```{r, echo=FALSE, eval=FALSE}
+data.summary2_NGP <- lapply(all.scen.NGP, function(dat){
+  counts       <- dat$counts[rowSums(dat$counts>0)>=3, ]
+  log2CPM      <- log2(edgeR::cpm(counts)+1)
+  mean.log2CPM <- rowMeans(log2CPM)
+  var.log2CPM  <- rowVars(log2CPM)
+  cv.log2CPM   <- apply(log2CPM, 1, function(y) sd(y)/mean(y))
+  
+  LFC <- as.data.frame(t(apply(log2CPM, 1, function(x){
+    lfc    <- diff(tapply(x, dat$group, mean))
+    lfc.se <- sqrt(sum(tapply(x, dat$group, function(y){
+      var(y)/length(y)
+    })))
+    c(lfc, lfc.se)
+  })))
+  colnames(LFC) <- c("lfc", "lfc.se") 
+  
+  df <- data.frame(mean.norm=mean.log2CPM, var.norm=var.log2CPM,
+                   BCV = cv.log2CPM, logFC=LFC$lfc, wald.stat=LFC$lfc/LFC$lfc.se, 
+                   genes=as.character(rownames(LFC)), row.names = rownames(LFC))
+  df 
+})
+saveRDS(data.summary2_NGP, "V6/empirical results/NGP/data.summary2_NGP.rds")
+
+```
+
+  
+```{r, echo=FALSE, fig.width=12, fig.height=5, fig.cap="\\label{NGP_res1} Summary of gene level characteristics for pooling scenarios generated using the NGP nutlin dataset. A) The distribution of $\\log_2$-mean normalized expression of genes, the $\\log_2$-vriance of normalized expression of genes, and the log-fold-change (LFC) between nutlin-3 and control; B) the estimated bias (mean absolute bias) of the three test scenarios relative to the reference scenario A0."}
+data.summary2_NGP <- readRDS("V6/empirical results/NGP/data.summary2_NGP.rds")
+common.genes <- table(do.call("c", lapply(data.summary2_NGP, function(dat){
+  as.character(dat$genes)
+})))
+common.genes <- names(common.genes)[which(common.genes==4)]
+
+#par(mfrow=c(1, 5), oma=c(0,0,2, 0))
+mean.expr <- sapply(data.summary2_NGP, function(s){
+  v <- log2(s$mean.norm+1)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(mean.expr) <- scenario.names
+# boxplot(mean.expr, ylab="log2-mean",  main = "average gene expression",
+#         pch=20, border=cols, cex=0.25, xaxt="n")
+# axis(1, at=1:3, labels = FALSE)
+# text(1:3, par("usr")[3]-0.1 , labels = colnames(mean.expr), 
+#      srt = 45, pos = 1, xpd = TRUE)
+# points(1:3, colMeans(mean.expr, na.rm = TRUE), pch=20, cex=1.5, col=3) 
+
+
+var.expr <- sapply(data.summary2_NGP, function(s){
+  v <- log2((s$var.norm)+1)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(var.expr) <- scenario.names
+# boxplot(var.expr, ylab="log2-var",  main = "variance of gene expression",
+#         pch=20, border=cols, cex=0.25, xaxt="n")
+# axis(1, at=1:3, labels = FALSE)
+# text(1:3, par("usr")[3]-0.1 , labels = colnames(var.expr), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+
+bcv.expr <- sapply(data.summary2_NGP, function(s){
+  v <- sqrt(s$BCV)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(bcv.expr) <- scenario.names
+# boxplot(bcv.expr, ylab="CV", main = "Coefficients of Variations", 
+#         border=cols, pch=20, cex=0.25, xaxt="n")
+# axis(1, at=1:3, labels = FALSE)
+# text(1:3, par("usr")[3]-0.1 , labels = colnames(bcv.expr), 
+#      srt = 45, pos = 1, xpd = TRUE)
+
+
+
+logFC <- sapply(data.summary2_NGP, function(s){
+  v <- abs(s$logFC)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(logFC) <- scenario.names
+# boxplot(logFC, ylab="|lfc|", main = "log-fold-change", 
+#         border=cols, pch=20, cex=0.25, ylim=c(0, 6), xaxt="n")
+# axis(1, at=1:3, labels = FALSE)
+# text(1:3, par("usr")[3]-0.1 , labels = colnames(logFC), 
+#      srt = 45, pos = 1, xpd = TRUE)
+# 
+
+
+SNR <- sapply(data.summary2_NGP, function(s){
+  v <- abs(s$wald.stat)
+  names(v) <- s$genes
+  v[common.genes]
+})
+colnames(SNR) <- scenario.names
+# boxplot(SNR, ylab="|lfc/SE|", main = "standardized log-fold-change", 
+#         border=cols, pch=20, cex=0.25, ylim=c(0, 10), xaxt="n")
+# axis(1, at=1:3, labels = FALSE)
+# text(1:3, par("usr")[3]-0.1 , labels = colnames(SNR), 
+#      srt = 45, pos = 1, xpd = TRUE) 
+# box("outer", col="gray")
+# 
+
+biasLFC.withA0 <- sapply(colnames(logFC[,-1]),  function(i){ 
+  MAD <- mean(abs(logFC[,1]-logFC[, i])) 
+})
+cols2 <- cols[-1]
+
+
+
+mean.expr2 <- reshape2::melt(mean.expr)
+var.expr2  <- reshape2::melt(var.expr) 
+logFC2     <- reshape2::melt(logFC)
+#SNR2       <- reshape2::melt(SNR)
+
+df <- as.data.frame(rbind(mean.expr2, var.expr2, logFC2))
+df$statistic <- rep(c("log2-mean expression", "log-variance", "LFC"), 
+                    c(nrow(mean.expr2), nrow(var.expr2),  nrow(logFC2)))
+df$q <- ifelse(substr(df$Var2,1,1)=="A", 1, ifelse(substr(df$Var2,1,1)=="B", 2, 3))
+df$q <- as.factor(df$q)
+p1 <- ggplot(df, aes(y=value, x=Var2, colour=q))+
+  stat_boxplot(notch=TRUE, coef = 1.5, size = 0.75, notchwidth = 0.2)+
+  facet_wrap(~statistic, scales = "free_y")+
+  theme_bw()+ 
+  scale_color_manual(values = c(1,2,3))+
+  theme(legend.position = "none",
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(hjust = 1, size=15))+
+  labs(y="log2-mean expression", x=NULL, title = "A")
+
+
+
+biasLFC.withA02 <- as.data.frame(biasLFC.withA0)
+biasLFC.withA02$scenario <- rownames(biasLFC.withA02)
+biasLFC.withA02$q <- ifelse(biasLFC.withA02$scenario=="A", 1,
+                           ifelse(biasLFC.withA02$scenario=="B", 2, 3))
+biasLFC.withA02$q <- as.factor(biasLFC.withA02$q)
+
+p2 <- ggplot(biasLFC.withA02, aes(y=biasLFC.withA0, x=scenario,  colour=q))+
+  geom_point(size=4)+
+  scale_color_manual(values = c(1,2,3), aesthetics = "colour")+   
+  geom_segment(aes(x=reorder(scenario, biasLFC.withA0), y = 0, 
+                   xend = reorder(scenario, biasLFC.withA0),
+                   yend = biasLFC.withA0, colour=q), data=biasLFC.withA02)+
+  theme_bw()+  
+  theme(legend.position = "none",
+        #legend.title = element_blank(),
+        #legend.direction = "horizontal",
+        axis.text.x = element_text(hjust = 1,size=15))+
+  ylim(0, 0.15)+
+  labs(y="LFC bias: mean absolute bias", x=NULL, title = "B") 
+ 
+gridExtra::grid.arrange(grobs=list(p1,p2), ncol=2, nrow=1, widths=c(0.75, 0.25))
+grid.rect(gp=gpar(fill=NA)) 
+```
+
+ 
+```{r, echo=FALSE, eval=FALSE}
+## DGE
+source("Global files/DE_Tools.R")  
+edgeR.DE.res_NGP <- lapply(all.scen.NGP, function(dat){
+  res <- run_edgeR_glm(dat) 
+  res
+})
+saveRDS(edgeR.DE.res_NGP, "V6/empirical results/NGP/edgeR.DE.res_NGP.rds")
+
+limma.DE.res_NGP <- lapply(all.scen.NGP, function(dat){
+  res <- run_limmaVoom(dat)  
+  res 
+})
+saveRDS(limma.DE.res_NGP, "V6/empirical results/NGP/limma.DE.res_NGP.rds")
+
+```
+
+```{r, echo=FALSE,fig.width=12, fig.height=5, fig.cap="\\label{NGP_res2} Differential gene expression results for pooling scenarios generated using the NGP nutlin RNA-seq dataset. A) The number of DE genes detected at 5% FDR; B) The fraction of overlap (concordance) defined as the fraction of DE genes detected in a test scenario that are also detected in the reference scenario."}
+edgeR.DE.res_NGP <- readRDS("V6/empirical results/NGP/edgeR.DE.res_NGP.rds")
+limma.DE.res_NGP <- readRDS("V6/empirical results/NGP/limma.DE.res_NGP.rds")
+edgeR.GSEA.res_NGP <- readRDS("V6/empirical results/NGP/edgeR.GSEA.res_NGP.rds")
+limma.GSEA.res_NGP <- readRDS("V6/empirical results/NGP/limma.GSEA.res_NGP.rds") 
+
+dlt=2
+
+edgeR.nDE.genes_NGP <- t(sapply(edgeR.DE.res_NGP, function(x){
+  sum(x$result$q<0.05 & abs(x$result$logFC)>=dlt)
+}))
+limma.nDE.genes_NGP <- t(sapply(limma.DE.res_NGP, function(x){
+  sum(x$result$q<0.05 & abs(x$result$LFC)>=dlt)
+})) 
+
+nDE.genes_NGP <- data.frame(nDE=c(edgeR.nDE.genes_NGP, limma.nDE.genes_NGP),
+                                  tool = rep(c("edgeR", "limma"), each=nrow(data.summary1_NGP)),
+                                  scenario=data.summary1_NGP$scenario,
+                                  pool = as.factor(data.summary1_NGP$q),
+                                  tot.counts=data.summary1_NGP$tot.counts,
+                                  n.replicates=data.summary1_NGP$n.replicates,
+                                  depth=data.summary1_NGP$median.LS)
+
+
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(gridExtra))
+
+nDE.genes_NGP$scenario <- factor(nDE.genes_NGP$scenario, levels=c("A0", "A", "B", "C"))
+p1.DGE <- ggplot(nDE.genes_NGP, aes(x=scenario, y=nDE, ggroup=pool, color=pool, fill=pool))+
+  geom_bar(stat = "identity", position = "dodge", size=0.75)+
+  theme_bw()+
+  facet_wrap(~tool)+
+  scale_color_manual(values = c(1,2,3))+
+  scale_fill_manual(values = alpha(c(1,2,3), 0.2))+ 
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        legend.direction = "horizontal",
+        axis.text.x = element_text(hjust = 1, size=15))+
+  labs(y="#DE genes (5% FDR)", x=NULL, title="A")
+  
+   
+edgeR.DE.compare_NGP <- t(sapply(edgeR.DE.res_NGP, function(x){
+  res.pool <- x$result
+  res.orgl <- edgeR.DE.res_NGP$A0$result
+  res <- merge(res.pool, res.orgl, by="Genes")
+  fpp <- sum(res$q.x<0.05 & abs(res$logFC.x)>dlt & res$q.y>=0.05, 
+             na.rm = TRUE)/sum(res$q.x<0.05 & abs(res$logFC.x)>dlt, na.rm = TRUE)
+  tpp <- sum(res$q.x<0.05 & res$q.y<0.05 & abs(res$logFC.y)>dlt, 
+             na.rm = TRUE)/sum(res$q.y<0.05 & abs(res$logFC.y)>dlt, na.rm = TRUE)
+  c(fpp=fpp, tpp=tpp)
+}))
+limma.DE.compare_NGP <- t(sapply(limma.DE.res_NGP, function(x){
+  res.pool <- x$result
+  res.orgl <- limma.DE.res_NGP$A0$result
+  res <- merge(res.pool, res.orgl, by="Genes")
+  fpp <- sum(res$q.x<0.05 &  abs(res$LFC.x) >= dlt &  res$q.y>=0.05, 
+             na.rm = TRUE)/sum(res$q.x<0.05 &  abs(res$LFC.x)>= dlt, na.rm = TRUE)
+  tpp <- sum(res$q.x<0.05 & res$q.y<0.05 & abs(res$LFC.y)>dlt, 
+             na.rm = TRUE)/sum(res$q.y<0.05 & abs(res$LFC.y)>dlt, na.rm = TRUE)
+  c(fpp=fpp, tpp=tpp)
+})) 
+ 
+ 
+
+
+TPP.res_NGP <- data.frame(TPP=c(edgeR.DE.compare_NGP[, 2],
+                                      limma.DE.compare_NGP[,2]),
+                        tool = rep(c("edgeR", "limma"), each=nrow(data.summary1_NGP)),
+                        scenario=data.summary1_NGP$scenario,
+                        pool = factor(data.summary1_NGP$q),
+                        tot.counts=data.summary1_NGP$tot.counts,
+                        n.replicates=data.summary1_NGP$n.replicates,
+                        depth=data.summary1_NGP$median.LS) 
+TPP.res_NGP  <- TPP.res_NGP[TPP.res_NGP$scenario != "A0",]
+
+ 
+p2 <- ggplot(TPP.res_NGP, aes(x=scenario, y=TPP, group=pool, color=pool, fill=pool))+
+  geom_bar(stat = "identity", position = "dodge", size=0.75)+
+  theme_bw()+
+  facet_wrap(~tool)+
+  scale_color_manual(values = c(1,2,3))+
+  scale_fill_manual(values = alpha(c(1,2,3), 0.2))+ 
+  theme(legend.position = "none",
+        legend.title = element_blank(),
+        legend.direction = "horizontal",
+        axis.text.x = element_text(hjust = 1, size=15))+
+  labs(y="fraction of overlap with A0", x=NULL, title = "B")+
+  ylim(0, 1)
+  
+grid.arrange(grobs=list(p1.DGE, p2), nrow=1, ncol=2)
+grid.rect(gp=gpar(fill=NA))
+```
+
+
+```{r, echo=FALSE, fig.width=12, fig.height=5, fig.cap="\\label{power_cost_NGP} Zodiac plot representing power (at 5\\% significance level) versus the total cost of data generation for NGP cell line data. The gene expression levels are generated from NB$(\\rho L_j, \\phi)$, where $\\phi$ is the common over-dispersion parameter for the NGP nutlin data (estimated using the edgeR package). The plots are generated for low, medium and high abundance genes with relative abundace of $\\rho=10^{-7}, \\rho=10^{-6}\\textrm{and} \\rho=10^{-5}$, respectively. One unpooled design ($q=1$) and two pooled designs ($q=2$ and $q=3$) were compared. These designs have equal number of replicates (3 replicates per group). That is, 3 individual cell lines ($q=1$), 3 pools of 2 cell lines ($q=2$) and 3 pools of 3 cell lines ($q=3$). The mean library size per cell line is $15\\times 10^6$. The curves are generated for two different minimum LFCs ($\\theta$) between the two groups, $\\theta\\ge 0.5$ and $\\theta\\ge 1$. The relative cost is determined as the total cost of each strategy divided by the maximum total cost without pooling (9 cell lines per group)."}
+# NGP.dat <- all.scen.NGP$A0
+# library(edgeR)
+# ede <- DGEList(counts = NGP.dat$counts, group = NGP.dat$group)
+# ede <- calcNormFactors(ede)
+# ede <- estimateCommonDisp(ede)
+
+lfc  <- list(S=0.5, L=1.0) 
+rho  <- c(10^-7, 10^-6, 10^-5)
+n1   <- 9
+phi  <- 0.006114279 #ede$common.dispersion 
+alpha   <- 0.05 
+
+# small LFC, small phi, low.abundance
+pwrAA <- list(q1= calcPower_and_Cost(alpha = alpha, rho1 = rho[1], exp.theta = exp(lfc$S), 
+                                       n1 = 3, q = 1, phi=phi, mean.L = 15e6),
+             q2  = calcPower_and_Cost(alpha = alpha, rho1 = rho[1],  exp.theta = exp(lfc$S),  
+                                       n1 = 6, q = 2, phi=phi, mean.L = 15e6),
+             q3  = calcPower_and_Cost(alpha = alpha, rho1 = rho[1],  exp.theta = exp(lfc$S), 
+                                       n1 = 9, q = 3, phi=phi, mean.L = 15e6))
+pwrA       <- data.frame(pwr=sapply(pwrAA, function(x)  x$power),
+                         cst=sapply(pwrAA, function(x)  x$total.cost),
+                         rho =rho[1], LFC = lfc$S, q=1:3)
+
+# large LFC, small phi, low.abundance
+pwrBB <- list(q1= calcPower_and_Cost(alpha = alpha, rho1 = rho[1], exp.theta = exp(lfc$L), 
+                                       n1 = 3, q = 1, phi=phi, mean.L = 15e6),
+             q2  = calcPower_and_Cost(alpha = alpha, rho1 = rho[1],  exp.theta = exp(lfc$L),  
+                                       n1 = 6, q = 2, phi=phi, mean.L = 15e6),
+             q3  = calcPower_and_Cost(alpha = alpha, rho1 = rho[1],  exp.theta = exp(lfc$L), 
+                                       n1 = 9, q = 3, phi=phi, mean.L = 15e6))
+pwrB       <- data.frame(pwr=sapply(pwrBB, function(x)  x$power),
+                         cst=sapply(pwrBB, function(x)  x$total.cost),
+                         rho =rho[1], LFC = lfc$L, q=1:3)
+
+# small LFC, small phi, medium abundance
+pwrCC <- list(q1= calcPower_and_Cost(alpha = alpha, rho1 = rho[2], exp.theta = exp(lfc$S), 
+                                       n1 = 3, q = 1, phi=phi, mean.L = 15e6),
+             q2  = calcPower_and_Cost(alpha = alpha, rho1 = rho[2],  exp.theta = exp(lfc$S),  
+                                       n1 = 6, q = 2, phi=phi, mean.L = 15e6),
+             q3  = calcPower_and_Cost(alpha = alpha, rho1 = rho[2],  exp.theta = exp(lfc$S), 
+                                       n1 = 9, q = 3, phi=phi, mean.L = 15e6))
+pwrC       <- data.frame(pwr=sapply(pwrCC, function(x)  x$power),
+                         cst=sapply(pwrCC, function(x)  x$total.cost),
+                         rho =rho[2], LFC = lfc$S, q=1:3)
+
+# large LFC, small phi, medium abundance
+pwrDD <- list(q1= calcPower_and_Cost(alpha = alpha, rho1 = rho[2], exp.theta = exp(lfc$L), 
+                                       n1 = 3, q = 1, phi=phi, mean.L = 15e6),
+             q2  = calcPower_and_Cost(alpha = alpha, rho1 = rho[2],  exp.theta = exp(lfc$L),  
+                                       n1 = 6, q = 2, phi=phi, mean.L = 15e6),
+             q3  = calcPower_and_Cost(alpha = alpha, rho1 = rho[2],  exp.theta = exp(lfc$L), 
+                                       n1 = 9, q = 3, phi=phi, mean.L = 15e6))
+pwrD       <- data.frame(pwr=sapply(pwrDD, function(x)  x$power),
+                         cst=sapply(pwrDD, function(x)  x$total.cost),
+                         rho =rho[2], LFC = lfc$L, q=1:3)
+# small LFC, small phi, high abundance
+pwrEE <- list(q1= calcPower_and_Cost(alpha = alpha, rho1 = rho[3], exp.theta = exp(lfc$S), 
+                                       n1 = 3, q = 1, phi=phi, mean.L = 15e6),
+             q2  = calcPower_and_Cost(alpha = alpha, rho1 = rho[3],  exp.theta = exp(lfc$S),  
+                                       n1 = 6, q = 2, phi=phi, mean.L = 15e6),
+             q3  = calcPower_and_Cost(alpha = alpha, rho1 = rho[3],  exp.theta = exp(lfc$S), 
+                                       n1 = 9, q = 3, phi=phi, mean.L = 15e6))
+pwrE       <- data.frame(pwr=sapply(pwrEE, function(x)  x$power),
+                         cst=sapply(pwrEE, function(x)  x$total.cost),
+                         rho =rho[3], LFC = lfc$S, q=1:3)
+
+# large LFC, small phi, high abundance
+pwrFF <- list(q1= calcPower_and_Cost(alpha = alpha, rho1 = rho[3], exp.theta = exp(lfc$L), 
+                                       n1 = 3, q = 1, phi=phi, mean.L = 15e6),
+             q2  = calcPower_and_Cost(alpha = alpha, rho1 = rho[3],  exp.theta = exp(lfc$L),  
+                                       n1 = 6, q = 2, phi=phi, mean.L = 15e6),
+             q3  = calcPower_and_Cost(alpha = alpha, rho1 = rho[3],  exp.theta = exp(lfc$L), 
+                                       n1 = 9, q = 3, phi=phi, mean.L = 15e6))
+pwrF       <- data.frame(pwr=sapply(pwrFF, function(x)  x$power),
+                         cst=sapply(pwrFF, function(x)  x$total.cost),
+                         rho =rho[3], LFC = lfc$L, q=1:3)
+
+ref.cost <- 9*20+9*100+9*15*7.5
+pwr.all <- as.data.frame(rbind(pwrA, pwrB, pwrC, pwrD, pwrE, pwrF))
+pwr.all$cst <- pwr.all$cst/ref.cost
+pwr.all$LFC <- as.character(pwr.all$LFC) 
+
+library(ggplot2) 
+d<-ggplot(pwr.all, aes(x=cst, y=pwr-runif(nrow(pwr.all), 0, 0.02), group=LFC, 
+                       colour=LFC, label = paste0("q=",pwr.all$q)))+
+  geom_line(size=1)+
+  geom_point(size=4)+
+  geom_text(hjust=0, vjust=1.5, size=6)+
+  facet_wrap(~rho, labeller = label_bquote(rho==.(rho)))+
+  xlim(0.65, 0.85)+ylim(0,1)+
+  theme_bw()+
+  labs(x="relative cost", y="power")+
+  scale_colour_manual(values=c("red", "blue"), labels = expression(theta>="0.5",theta>="1.0"))+
+  theme(legend.position = c(0.9, 0.2),
+        strip.text = element_text(size=15),
+        #legend.direction = "horizontal",
+        legend.text = element_text(size = 15),
+        axis.title = element_text(size = 15)
+        ) 
+d
+```
+
+
+\newpage
+# Supplementary results 4: additional results
+
+```{r, echo=FALSE, fig.width=12, fig.height=5, fig.cap="\\label{paircomp} Pairwise comparison of scenarios based on the overall score for different characteristics. A) scenarios with different number of libraries but equal sequencing depth per library (demonstrating a sample size driven effect), B) scenarios with equal number of libraries but different sequencing depth per library (demonstrating a minor effect of sequencing depth),  and  C) scenarios with equal number of libraries and equal sequencing depth per library but different pool size (demonstrating a large pooling effect)."}
+df.score.limma2 <- readRDS("manuscript/V1/suppl_results/df.score.limma2.rds")
+# pairwise difference
+
+
+pair.diff1 <- data.frame(scen1=c("A0","A3", "B1", "B3", "C1", "C3"),
+                         scen2=c("A1","A2", "B2", "B4", "C2", "C4"),
+                         q =  c(1,1,2,2,4,4),
+                         type="A")
+
+pair.diff2 <- data.frame(scen1=c("A0","A0", "A3", "B1", "B2", "C1", "C2"),
+                         scen2=c("A3","A4", "A4", "B3", "B4", "C3", "C4"),
+                         q =  c(1,1,1,2,2,4,4),
+                         type="B")
+
+pair.diff3 <- data.frame(scen1=c("B1","B3","C1", "C3"),
+                         scen2=c("A1","A2", "B2", "B4"), 
+                         q = NA,
+                         type="C")
+
+pair.diff <- rbind(pair.diff1, pair.diff2, pair.diff3)
+pair.diff$diff <- df.score.limma2$score[match(pair.diff$scen1, df.score.limma2$scenario)]-df.score.limma2$score[match(pair.diff$scen2, df.score.limma2$scenario)]
+pair.diff$contrast <- paste(pair.diff$scen1, pair.diff$scen2, sep = " - ")
+
+ggplot(pair.diff, aes(x=reorder(contrast, -diff), y=diff, colour=as.factor(q)))+
+  geom_point(size=4)+
+  geom_segment(aes(xend=reorder(contrast, -diff), x=reorder(contrast, -diff), y=0, yend=diff),
+               size=1)+
+  facet_wrap(~type, scales = "free_y")+
+  coord_flip()+
+  theme_bw()+
+  labs(x=NULL, y="score difference")+
+  theme(legend.position = "none",
+        axis.text.y = element_text(size=16))
+  
+
+```
+
+\newpage
+
+# References
+
+
+
+
+
+
+
+
+
+
+
